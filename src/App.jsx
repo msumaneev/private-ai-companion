@@ -262,7 +262,7 @@ function App() {
             {balance !== null && <p className="text-xs text-green-600 font-medium mt-0.5">Баланс: ${balance}</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button className="text-slate-800/70 hover:text-fuchsia-600 transition p-1" onClick={() => { setTempApiKey(apiKey); setShowSettingsModal(true); }}>
+            <button className="text-slate-800/70 hover:text-violet-500 transition p-1" onClick={() => { setTempApiKey(apiKey); setShowSettingsModal(true); }}>
               <Settings className="w-5 h-5" />
             </button>
             <button className="md:hidden text-slate-800/70 p-1" onClick={() => setIsSidebarOpen(false)}>
@@ -274,13 +274,13 @@ function App() {
         {/* Tabs */}
         <div className="flex border-b border-white/40 shrink-0">
           <button 
-            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${activeTab === 'contacts' ? 'text-fuchsia-600 border-b-2 border-indigo-600' : 'text-slate-800/70 hover:text-slate-800/90'}`}
+            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${activeTab === 'contacts' ? 'text-violet-500 border-b-2 border-indigo-600' : 'text-slate-800/70 hover:text-slate-800/90'}`}
             onClick={() => setActiveTab('contacts')}
           >
             <User className="w-4 h-4" /> Контакты
           </button>
           <button 
-            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${activeTab === 'stories' ? 'text-fuchsia-600 border-b-2 border-indigo-600' : 'text-slate-800/70 hover:text-slate-800/90'}`}
+            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${activeTab === 'stories' ? 'text-violet-500 border-b-2 border-indigo-600' : 'text-slate-800/70 hover:text-slate-800/90'}`}
             onClick={() => setActiveTab('stories')}
           >
             <BookOpen className="w-4 h-4" /> Сюжеты
@@ -297,7 +297,7 @@ function App() {
                   className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-white/50' : 'hover:bg-white/60'}`}
                 >
                   <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
-                    {chat.type === 'generator' ? <Bot className="text-fuchsia-600 w-5 h-5" /> : renderAvatar(chat.avatarBase64)}
+                    {chat.type === 'generator' ? <Bot className="text-violet-500 w-5 h-5" /> : renderAvatar(chat.avatarBase64)}
                   </div>
                   <div className="overflow-hidden">
                     <h3 className="font-medium text-slate-800 text-sm truncate">{chat.name}</h3>
@@ -318,7 +318,7 @@ function App() {
                   className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-white/50' : 'hover:bg-white/60'}`}
                 >
                   <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
-                    {chat.type === 'plot_generator' ? <Sparkles className="text-fuchsia-600 w-5 h-5" /> : <Users className="text-fuchsia-600 w-5 h-5" />}
+                    {chat.type === 'plot_generator' ? <Sparkles className="text-violet-500 w-5 h-5" /> : <Users className="text-violet-500 w-5 h-5" />}
                   </div>
                   <div className="overflow-hidden flex-1">
                     <h3 className="font-medium text-slate-800 text-sm truncate">{chat.name}</h3>
@@ -338,13 +338,13 @@ function App() {
             <>
               <button 
                 onClick={() => setShowContactModal(true)}
-                className="flex items-center justify-center w-full py-2.5 bg-white/40 backdrop-blur-xl border border-white/50 border border-indigo-200 text-fuchsia-600 rounded-xl text-sm font-medium hover:bg-white/50 transition-colors shadow-sm"
+                className="flex items-center justify-center w-full py-2.5 bg-white/40 backdrop-blur-xl border border-white/50 border border-indigo-200 text-violet-500 rounded-xl text-sm font-medium hover:bg-white/50 transition-colors shadow-sm"
               >
                 <Plus className="w-4 h-4 mr-1.5" /> Создать вручную
               </button>
               <button 
                 onClick={startAIGenerator}
-                className="flex items-center justify-center w-full py-2.5 bg-fuchsia-600 text-white rounded-xl text-sm font-medium hover:bg-fuchsia-600 hover:bg-fuchsia-500 transition-colors shadow-sm"
+                className="flex items-center justify-center w-full py-2.5 bg-violet-400 text-white rounded-xl text-sm font-medium hover:bg-violet-400 hover:bg-violet-500 transition-colors shadow-sm"
               >
                 <Sparkles className="w-4 h-4 mr-1.5" /> Создать с ИИ
               </button>
@@ -353,13 +353,13 @@ function App() {
             <>
               <button 
                 onClick={() => setShowStoryModal(true)}
-                className="flex items-center justify-center w-full py-2.5 bg-fuchsia-600 text-white rounded-xl text-sm font-medium hover:bg-fuchsia-600 hover:bg-fuchsia-500 transition-colors shadow-sm"
+                className="flex items-center justify-center w-full py-2.5 bg-violet-400 text-white rounded-xl text-sm font-medium hover:bg-violet-400 hover:bg-violet-500 transition-colors shadow-sm"
               >
                 <BookOpen className="w-4 h-4 mr-1.5" /> Начать сюжет
               </button>
               <button 
                 onClick={startAIPlotGenerator}
-                className="flex items-center justify-center w-full py-2.5 bg-white/50 text-fuchsia-600 border border-indigo-200 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm mt-2"
+                className="flex items-center justify-center w-full py-2.5 bg-white/50 text-violet-500 border border-indigo-200 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm mt-2"
               >
                 <Sparkles className="w-4 h-4 mr-1.5" /> Сгенерировать с ИИ
               </button>
@@ -379,9 +379,9 @@ function App() {
           {activeChat ? (
             <>
               <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0 border border-indigo-50">
-                {activeChat.type === 'generator' ? <Bot className="text-fuchsia-600 w-6 h-6" /> : 
-                 activeChat.type === 'plot_generator' ? <Sparkles className="text-fuchsia-600 w-6 h-6" /> : 
-                 activeChat.type === 'group' ? <Users className="text-fuchsia-600 w-6 h-6" /> : 
+                {activeChat.type === 'generator' ? <Bot className="text-violet-500 w-6 h-6" /> : 
+                 activeChat.type === 'plot_generator' ? <Sparkles className="text-violet-500 w-6 h-6" /> : 
+                 activeChat.type === 'group' ? <Users className="text-violet-500 w-6 h-6" /> : 
                  renderAvatar(activeChat.avatarBase64)}
               </div>
               <div className="flex-1 overflow-hidden mr-2">
@@ -397,7 +397,7 @@ function App() {
             <select 
               value={model} 
               onChange={(e) => setModel(e.target.value)}
-              className="text-xs bg-white/60 border border-white/50 text-slate-800/90 rounded-lg p-2 outline-none focus:ring-2 focus:ring-fuchsia-500 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-2"
+              className="text-xs bg-white/60 border border-white/50 text-slate-800/90 rounded-lg p-2 outline-none focus:ring-2 focus:ring-violet-400 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-2"
             >
               <option value="sao10k/l3.3-euryale-70b">Euryale Llama 3.3 70B (Uncensored)</option>
               <option value="anthracite-org/magnum-v4-72b">Magnum v4 72B (Uncensored)</option>
@@ -414,7 +414,7 @@ function App() {
                       clearChatMessages(activeChat.id);
                     }
                   }}
-                  className="p-2 text-slate-800/50 hover:text-fuchsia-600 hover:bg-white/50 rounded-lg transition-colors mr-1"
+                  className="p-2 text-slate-800/50 hover:text-violet-500 hover:bg-white/50 rounded-lg transition-colors mr-1"
                   title="Очистить историю сообщений"
                 >
                   <Eraser className="w-5 h-5" />
@@ -445,7 +445,7 @@ function App() {
           {!activeChat ? (
             <div className="h-full flex items-center justify-center text-slate-800/50">
               <div className="text-center">
-                <Sparkles className="w-12 h-12 text-fuchsia-800/50 mx-auto mb-3" />
+                <Sparkles className="w-12 h-12 text-violet-400 mx-auto mb-3" />
                 <p>Выберите чат или создайте новый в меню</p>
               </div>
             </div>
@@ -498,11 +498,11 @@ function App() {
                       <div 
                         className={`rounded-2xl p-4 ${
                           isUser 
-                            ? 'bg-fuchsia-600 hover:bg-fuchsia-500 text-slate-800 rounded-br-sm shadow-md' 
+                            ? 'bg-violet-400 hover:bg-violet-500 text-slate-800 rounded-br-sm shadow-md' 
                             : 'bg-white/40 backdrop-blur-xl border border-white/50 text-slate-800 shadow-sm rounded-bl-sm border border-white/40'
                         }`}
                       >
-                        <div className={`prose prose-sm max-w-none break-words ${isUser ? 'text-indigo-50 prose-headings:text-slate-800 prose-a:text-fuchsia-800/50 prose-strong:text-slate-800' : 'text-slate-800'}`}>
+                        <div className={`prose prose-sm max-w-none break-words ${isUser ? 'text-indigo-50 prose-headings:text-slate-800 prose-a:text-violet-400 prose-strong:text-slate-800' : 'text-slate-800'}`}>
                           <ReactMarkdown>{parsed.text}</ReactMarkdown>
                         </div>
                         
@@ -514,7 +514,7 @@ function App() {
                             <p className="text-xs text-fuchsia-700 mb-4 line-clamp-3">{extractedJSON.system_prompt}</p>
                             <button 
                               onClick={() => saveExtractedCharacter(extractedJSON)}
-                              className="w-full flex justify-center items-center gap-2 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-slate-800 text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
+                              className="w-full flex justify-center items-center gap-2 py-2 bg-violet-400 hover:bg-violet-500 text-slate-800 text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
                             >
                               <Plus className="w-4 h-4" /> Добавить в контакты
                             </button>
@@ -547,7 +547,7 @@ function App() {
 
         {/* Input Area */}
         <footer className="bg-white/40 backdrop-blur-xl border border-white/50 p-3 md:p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] shrink-0 z-10">
-          <div className="max-w-4xl mx-auto flex items-end bg-white/60 rounded-2xl border border-white/50 p-1 focus-within:ring-2 focus-within:ring-fuchsia-500 focus-within:border-transparent transition-all">
+          <div className="max-w-4xl mx-auto flex items-end bg-white/60 rounded-2xl border border-white/50 p-1 focus-within:ring-2 focus-within:ring-violet-400 focus-within:border-transparent transition-all">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -565,7 +565,7 @@ function App() {
             <button
               onClick={handleSend}
               disabled={!input.trim() || isTyping || !activeChat}
-              className="p-3 text-fuchsia-600 disabled:text-gray-300 transition-colors hover:text-fuchsia-600"
+              className="p-3 text-violet-500 disabled:text-gray-300 transition-colors hover:text-violet-500"
             >
               <Send className="w-5 h-5" />
             </button>
@@ -598,7 +598,7 @@ function App() {
                 type="text" 
                 value={newContactName}
                 onChange={e => setNewContactName(e.target.value)}
-                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500"
+                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
                 placeholder="Имя персонажа"
               />
             </div>
@@ -608,14 +608,14 @@ function App() {
               <textarea 
                 value={newContactPrompt}
                 onChange={e => setNewContactPrompt(e.target.value)}
-                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 resize-none h-28"
+                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-none h-28"
                 placeholder="Ты заботливый друг..."
               />
             </div>
 
             <div className="flex gap-2 justify-end">
               <button onClick={() => setShowContactModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Отмена</button>
-              <button onClick={createContact} disabled={!newContactName || !newContactPrompt} className="px-5 py-2.5 text-white bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition">Создать</button>
+              <button onClick={createContact} disabled={!newContactName || !newContactPrompt} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition">Создать</button>
             </div>
           </div>
         </div>
@@ -633,7 +633,7 @@ function App() {
                   <div className="space-y-4">
                     <button 
                       onClick={() => setIsCreatingCustomScenario(false)}
-                      className="text-sm text-fuchsia-600 hover:underline mb-2"
+                      className="text-sm text-violet-500 hover:underline mb-2"
                     >
                       ← Назад к выбору сюжета
                     </button>
@@ -644,7 +644,7 @@ function App() {
                         type="text" 
                         value={customScenarioData.title}
                         onChange={e => setCustomScenarioData(prev => ({...prev, title: e.target.value}))}
-                        className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500"
+                        className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
                         placeholder="Например: Ограбление банка"
                       />
                     </div>
@@ -654,7 +654,7 @@ function App() {
                       <textarea 
                         value={customScenarioData.world_context}
                         onChange={e => setCustomScenarioData(prev => ({...prev, world_context: e.target.value}))}
-                        className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 resize-none h-28"
+                        className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-none h-28"
                         placeholder="Детальное описание мира, текущей ситуации и правил поведения персонажей..."
                       />
                     </div>
@@ -664,7 +664,7 @@ function App() {
                       <select
                         value={customScenarioData.required_characters_count}
                         onChange={e => setCustomScenarioData(prev => ({...prev, required_characters_count: parseInt(e.target.value)}))}
-                        className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 bg-white/40 backdrop-blur-xl border border-white/50"
+                        className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 bg-white/40 backdrop-blur-xl border border-white/50"
                       >
                         {[1, 2, 3, 4, 5, 6, 7].map(n => <option key={n} value={n}>{n}</option>)}
                       </select>
@@ -683,7 +683,7 @@ function App() {
                           setIsCreatingCustomScenario(false);
                         }} 
                         disabled={!customScenarioData.title || !customScenarioData.world_context} 
-                        className="px-5 py-2.5 text-white bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition w-full"
+                        className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition w-full"
                       >
                         Далее (Выбор персонажей)
                       </button>
@@ -697,9 +697,9 @@ function App() {
                     >
                       <div>
                         <h4 className="font-bold text-fuchsia-800 mb-1">📝 Создать свой сюжет</h4>
-                        <p className="text-xs text-fuchsia-600/80">Напишите собственную историю и выберите количество персонажей</p>
+                        <p className="text-xs text-violet-500/80">Напишите собственную историю и выберите количество персонажей</p>
                       </div>
-                      <Plus className="text-fuchsia-600 w-5 h-5" />
+                      <Plus className="text-violet-500 w-5 h-5" />
                     </div>
 
                     <p className="text-sm text-slate-800/70 mt-4 mb-2">Или выберите готовый сюжет:</p>
@@ -711,7 +711,7 @@ function App() {
                       >
                         <h4 className="font-bold text-slate-800 mb-1">{s.title}</h4>
                         <p className="text-xs text-slate-800/70 mb-2">{s.description}</p>
-                        <div className="flex items-center text-xs text-fuchsia-600 font-medium">
+                        <div className="flex items-center text-xs text-violet-500 font-medium">
                           <Users className="w-3.5 h-3.5 mr-1" /> Требуется персонажей: {s.required_characters_count}
                         </div>
                       </div>
@@ -722,7 +722,7 @@ function App() {
                 <div className="space-y-4">
                   <button 
                     onClick={() => { setSelectedScenario(null); setStorySlots({}); }}
-                    className="text-sm text-fuchsia-600 hover:underline mb-2"
+                    className="text-sm text-violet-500 hover:underline mb-2"
                   >
                     ← Назад к выбору сюжета
                   </button>
@@ -739,7 +739,7 @@ function App() {
                       <select 
                         value={storySlots[i] || ''}
                         onChange={e => setStorySlots(prev => ({...prev, [i]: e.target.value}))}
-                        className="w-full border border-white/60 rounded-xl p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 bg-white/40 backdrop-blur-xl border border-white/50"
+                        className="w-full border border-white/60 rounded-xl p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 bg-white/40 backdrop-blur-xl border border-white/50"
                       >
                         <option value="" disabled>-- Выберите контакт --</option>
                         <option value="USER" disabled={Object.values(storySlots).includes('USER') && storySlots[i] !== 'USER'}>
@@ -766,7 +766,7 @@ function App() {
                 <button 
                   onClick={createStory} 
                   disabled={Object.keys(storySlots).length < selectedScenario.required_characters_count} 
-                  className="px-5 py-2.5 text-white bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
+                  className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
                 >
                   Начать
                 </button>
@@ -788,7 +788,7 @@ function App() {
                 type="password" 
                 value={tempApiKey}
                 onChange={e => setTempApiKey(e.target.value)}
-                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500"
+                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
                 placeholder="sk-or-v1-..."
               />
               <p className="text-xs text-slate-800/70 mt-2">Ваш ключ надежно сохраняется только в вашем браузере (локально) и никуда не передается, кроме API OpenRouter.</p>
@@ -798,7 +798,7 @@ function App() {
               <button onClick={() => setShowSettingsModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Закрыть</button>
               <button 
                 onClick={() => { setApiKey(tempApiKey); setShowSettingsModal(false); }} 
-                className="px-5 py-2.5 text-white bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl text-sm font-medium hover:bg-indigo-700 transition"
+                className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 transition"
               >
                 Сохранить
               </button>
