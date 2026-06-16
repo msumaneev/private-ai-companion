@@ -177,7 +177,13 @@ function App() {
         body: JSON.stringify({ messages: openRouterMessages, model: selectedModel }),
       });
 
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) {
+        let errorMsg = `Ошибка API: ${response.status}`;
+        if (response.status === 404) errorMsg = 'Модель недоступна (404). Проверьте лимиты, провайдеров или настройки приватности на OpenRouter.';
+        if (response.status === 401) errorMsg = 'Неверный API ключ (401).';
+        if (response.status === 402) errorMsg = 'Недостаточно средств на балансе (402).';
+        throw new Error(errorMsg);
+      }
 
       const data = await response.json();
       const aiMessage = data.choices?.[0]?.message;
@@ -188,7 +194,7 @@ function App() {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      addMessageToChat(activeChatId, { role: 'assistant', content: '_Ошибка сети или неверный API ключ... Проверьте настройки._' });
+      addMessageToChat(activeChatId, { role: 'assistant', content: `_Ошибка: ${error.message}_` });
     } finally {
       setIsTyping(false);
     }
@@ -369,6 +375,7 @@ function App() {
               disabled={activeChat?.type === 'generator'}
               className="text-xs bg-gray-50 border border-gray-200 text-gray-700 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 max-w-[120px] sm:max-w-none disabled:opacity-50"
             >
+              <option value="google/gemini-2.0-flash:free">Gemini 2.0 Flash (Free)</option>
               <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B</option>
               <option value="meta-llama/llama-3.1-405b-instruct">Llama 3.1 405B</option>
             </select>
