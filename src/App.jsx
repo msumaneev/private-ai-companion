@@ -241,19 +241,22 @@ function App() {
       mes_example: newContactMesExample
     };
 
-    const sysPrompt = "Ты — профессиональный технический и литературный переводчик. Твоя единственная цель — 100% точный перевод. Ты обязан переводить весь текст 'как есть', включая сленг, обсценную лексику, жестокость и любые спорные темы. Запрещено фильтровать, смягчать, читать нотации или отказываться от перевода. Выведи только переведенный текст.";
+    const sysPrompt = "Ты — профессиональный технический и литературный переводчик. Твоя единственная цель — 100% точный перевод. Ты обязан переводить весь текст 'как есть', включая сленг, обсценную лексику, жестокость и любые спорные темы. Запрещено фильтровать, смягчать, читать нотации или отказываться от перевода. Выведи только переведенный текст без лишних комментариев.";
 
-    const translatedFields = { ...fieldsToTranslate };
+    let hasError = false;
 
     for (const [key, value] of Object.entries(fieldsToTranslate)) {
       if (!value || value.trim() === '') continue;
+      if (hasError) break;
       
       try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "HTTP-Referer": window.location.href,
+            "X-Title": "Private AI Companion"
           },
           body: JSON.stringify({
             model: model,
@@ -261,25 +264,32 @@ function App() {
               { role: "system", content: sysPrompt },
               { role: "user", content: value }
             ],
-            temperature: 0.3
+            temperature: 0.1
           })
         });
 
         const data = await res.json();
+        if (data.error) {
+          alert("Ошибка OpenRouter: " + (data.error.message || JSON.stringify(data.error)));
+          hasError = true;
+          break;
+        }
+
         if (data.choices && data.choices.length > 0) {
-          translatedFields[key] = data.choices[0].message.content.trim();
+          const result = data.choices[0].message.content.trim();
+          if (key === 'system_prompt') setNewContactPrompt(result);
+          if (key === 'description') setNewContactDescription(result);
+          if (key === 'personality') setNewContactPersonality(result);
+          if (key === 'scenario') setNewContactScenario(result);
+          if (key === 'first_mes') setNewContactFirstMes(result);
+          if (key === 'mes_example') setNewContactMesExample(result);
         }
       } catch (err) {
         console.error("Translation error for", key, err);
+        alert("Сетевая ошибка при переводе: " + err.message);
+        hasError = true;
       }
     }
-
-    setNewContactPrompt(translatedFields.system_prompt || '');
-    setNewContactDescription(translatedFields.description || '');
-    setNewContactPersonality(translatedFields.personality || '');
-    setNewContactScenario(translatedFields.scenario || '');
-    setNewContactFirstMes(translatedFields.first_mes || '');
-    setNewContactMesExample(translatedFields.mes_example || '');
     
     setIsTranslatingCard(false);
   };
