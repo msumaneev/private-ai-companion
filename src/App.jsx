@@ -165,7 +165,7 @@ function App() {
           const text = char.tagline || char.description || '';
           if (text) {
             try {
-              const trRes = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ru&dt=t&q=${encodeURIComponent(text.slice(0, 500))}`);
+              const trRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ru&dt=t&q=${encodeURIComponent(text.slice(0, 500))}`)}`);
               const trData = await trRes.json();
               let translatedText = '';
               if (trData && trData[0]) {
@@ -535,10 +535,22 @@ function App() {
                   <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
                     {chat.type === 'generator' ? <Bot className="text-violet-500 w-5 h-5" /> : renderAvatar(chat.avatarBase64)}
                   </div>
-                  <div className="overflow-hidden">
+                  <div className="overflow-hidden flex-1">
                     <h3 className="font-medium text-slate-800 text-sm truncate">{chat.name}</h3>
                     <p className="text-xs text-slate-800/70 truncate">{chat.type === 'generator' ? 'Служебный чат' : 'Тет-а-тет'}</p>
                   </div>
+                  {chat.type === 'single' && (
+                    <button 
+                      onClick={(e) => { 
+                         e.stopPropagation(); 
+                         const char = characters.find(c => c.id === chat.characterIds[0]); 
+                         if(char) openEditContact(char); 
+                      }} 
+                      className="p-2 text-slate-800/40 hover:text-violet-500 hover:bg-white/40 rounded-lg transition-colors ml-2 shrink-0"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               ))}
               {chats.filter(c => c.type === 'single' || c.type === 'generator').length === 0 && (
@@ -1000,7 +1012,7 @@ function App() {
               {chubResults.map(char => (
                 <div key={char.id} className="bg-white/40 backdrop-blur-xl border border-white/50 p-3 rounded-xl flex items-start gap-3 hover:bg-white/50 transition">
                   <div className="w-16 h-16 rounded-lg bg-indigo-50 shrink-0 overflow-hidden">
-                    {char.fullPath && <img src={`https://avatars.charhub.io/avatars/${char.fullPath}/chara_card_v2.png`} onError={(e) => { e.target.onerror = null; e.target.src = `https://avatars.charhub.io/avatars/${char.fullPath}/avatar.webp`; }} className="w-full h-full object-cover" />}
+                    {char.avatar_url ? <img src={char.avatar_url.startsWith("http") ? char.avatar_url : `https://avatars.charhub.io/avatars/${char.avatar_url}`} className="w-full h-full object-cover" /> : <img src={`https://avatars.charhub.io/avatars/${char.fullPath}/avatar.webp`} className="w-full h-full object-cover" />}
                   </div>
                   <div className="flex-1 overflow-hidden">
                     <h4 className="font-bold text-slate-800 text-sm truncate">{char.name}</h4>
