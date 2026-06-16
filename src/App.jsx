@@ -360,7 +360,7 @@ function App() {
               </div>
               <div className="flex-1 overflow-hidden mr-2">
                 <h1 className="font-semibold text-gray-800 text-lg leading-tight truncate">{activeChat.name}</h1>
-                <p className="text-xs text-gray-500">{activeChat.type === 'group' ? `${activeChat.characterIds.length} участников` : (activeChat.type === 'generator' ? 'Генерация с Llama 405b' : 'Online')}</p>
+                <p className="text-xs text-gray-500">{activeChat.type === 'group' ? `${activeChat.characterIds.length} персонажей` : (activeChat.type === 'generator' ? 'Генерация персонажа' : 'Online')}</p>
               </div>
             </>
           ) : (
