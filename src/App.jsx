@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2 } from 'lucide-react';
+import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, setActiveChatId, addCharacter, addChat, addMessageToChat, clearChatMessages } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, setActiveChatId, addCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat } = useStore();
   
   const [model, setModel] = useState('sao10k/l3.3-euryale-70b');
   
@@ -414,8 +414,24 @@ function App() {
                   clearChatMessages(activeChat.id);
                 }
               }}
+              className="p-2 text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors mr-1"
+              title="Очистить историю сообщений"
+            >
+              <Eraser className="w-5 h-5" />
+            </button>
+
+            <button 
+              onClick={() => {
+                let msg = 'Вы уверены, что хотите полностью удалить этот чат?';
+                if (activeChat.type === 'single') msg = 'Вы уверены, что хотите удалить этот чат и этого персонажа навсегда?';
+                if (activeChat.type === 'group') msg = 'Вы уверены, что хотите удалить этот сюжет?';
+                
+                if (window.confirm(msg)) {
+                  deleteChat(activeChat.id);
+                }
+              }}
               className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-              title="Очистить чат"
+              title={activeChat.type === 'single' ? "Удалить чат и персонажа" : "Удалить чат"}
             >
               <Trash2 className="w-5 h-5" />
             </button>

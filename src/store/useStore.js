@@ -41,6 +41,29 @@ export const useStore = create(
           ),
         }));
       },
+
+      deleteChat: (chatId) => {
+        set((state) => {
+          const chatToDelete = state.chats.find(c => c.id === chatId);
+          if (!chatToDelete) return state;
+
+          let newCharacters = state.characters;
+          // If it's a single chat, delete the associated character
+          if (chatToDelete.type === 'single' && chatToDelete.characterIds.length > 0) {
+            const charId = chatToDelete.characterIds[0];
+            newCharacters = state.characters.filter(c => c.id !== charId);
+          }
+
+          const newChats = state.chats.filter(c => c.id !== chatId);
+          const newActiveChatId = state.activeChatId === chatId ? null : state.activeChatId;
+
+          return {
+            chats: newChats,
+            characters: newCharacters,
+            activeChatId: newActiveChatId
+          };
+        });
+      },
     }),
     {
       name: 'private-ai-companion-storage',
