@@ -34,6 +34,8 @@ function App() {
   const [newContactFirstMes, setNewContactFirstMes] = useState('');
   const [newContactMesExample, setNewContactMesExample] = useState('');
   const [contactModalTab, setContactModalTab] = useState('main');
+  const [editingCharId, setEditingCharId] = useState(null);
+  const [isTranslatingCard, setIsTranslatingCard] = useState(false);
 
   const [selectedScenario, setSelectedScenario] = useState(null);
   const [storySlots, setStorySlots] = useState({});
@@ -78,29 +80,56 @@ function App() {
     }
   };
 
+
+  const openEditContact = (char) => {
+    setEditingCharId(char.id);
+    setNewContactName(char.name || '');
+    setNewContactAvatar(char.avatarBase64 || null);
+    setNewContactPrompt(char.system_prompt || '');
+    setNewContactDescription(char.description || '');
+    setNewContactPersonality(char.personality || '');
+    setNewContactScenario(char.scenario || '');
+    setNewContactFirstMes(char.first_mes || '');
+    setNewContactMesExample(char.mes_example || '');
+    setContactModalTab('main');
+    setShowContactModal(true);
+  };
   const createContact = () => {
     if (!newContactName) return;
     
-    const newChar = addCharacter({
-      name: newContactName,
-      system_prompt: newContactPrompt,
-      avatarBase64: newContactAvatar,
-      description: newContactDescription,
-      personality: newContactPersonality,
-      scenario: newContactScenario,
-      first_mes: newContactFirstMes,
-      mes_example: newContactMesExample,
-    });
-    
-    const newChat = addChat({
-      type: 'single',
-      name: newContactName,
-      avatarBase64: newContactAvatar,
-      characterIds: [newChar.id]
-    });
+    if (editingCharId) {
+      updateCharacter(editingCharId, {
+        name: newContactName,
+        system_prompt: newContactPrompt,
+        avatarBase64: newContactAvatar,
+        description: newContactDescription,
+        personality: newContactPersonality,
+        scenario: newContactScenario,
+        first_mes: newContactFirstMes,
+        mes_example: newContactMesExample,
+      });
+    } else {
+      const newChar = addCharacter({
+        name: newContactName,
+        system_prompt: newContactPrompt,
+        avatarBase64: newContactAvatar,
+        description: newContactDescription,
+        personality: newContactPersonality,
+        scenario: newContactScenario,
+        first_mes: newContactFirstMes,
+        mes_example: newContactMesExample,
+      });
+      
+      const newChat = addChat({
+        type: 'single',
+        name: newContactName,
+        avatarBase64: newContactAvatar,
+        characterIds: [newChar.id]
+      });
 
-    if (newChar.first_mes) {
-      addMessageToChat(newChat.id, { role: 'assistant', content: newChar.first_mes, name: newChar.name });
+      if (newChar.first_mes) {
+        addMessageToChat(newChat.id, { role: 'assistant', content: newChar.first_mes, name: newChar.name });
+      }
     }
     
     setNewContactName('');
@@ -112,6 +141,7 @@ function App() {
     setNewContactMesExample('');
     setNewContactAvatar(null);
     setContactModalTab('main');
+    setEditingCharId(null);
     setShowContactModal(false);
   };
 
@@ -143,36 +173,84 @@ function App() {
       reader.onloadend = () => {
         const base64data = reader.result;
         
-        const newChar = addCharacter({
-          name: char.name,
-          avatarBase64: base64data,
-          description: char.description || '',
-          personality: char.personality || '',
-          scenario: char.scenario || '',
-          first_mes: char.first_mes || '',
-          mes_example: char.mes_example || '',
-          system_prompt: char.system_prompt || '',
-        });
-
-        const newChat = addChat({
-          type: 'single',
-          name: char.name,
-          avatarBase64: base64data,
-          characterIds: [newChar.id]
-        });
-
-        if (char.first_mes) {
-          addMessageToChat(newChat.id, { role: 'assistant', content: char.first_mes, name: char.name });
-        }
-
+        // Populate modal instead of saving
+        setEditingCharId(null);
+        setNewContactName(char.name || '');
+        setNewContactAvatar(base64data || null);
+        setNewContactPrompt(char.system_prompt || char.systemPrompt || '');
+        setNewContactDescription(char.description || '');
+        setNewContactPersonality(char.personality || '');
+        setNewContactScenario(char.scenario || '');
+        setNewContactFirstMes(char.first_mes || '');
+        setNewContactMesExample(char.mes_example || '');
+        setContactModalTab('main');
         setShowChubModal(false);
-        alert('Персонаж успешно добавлен!');
+        setShowContactModal(true);
       };
       reader.readAsDataURL(blob);
 
     } catch (err) {
       alert('Ошибка скачивания: ' + err.message);
     }
+  };
+
+  const translateCard = async () => {
+    if (!apiKey) {
+      alert("Сначала укажите API-ключ в настройках!");
+      return;
+    }
+    
+    setIsTranslatingCard(true);
+    const fieldsToTranslate = {
+      system_prompt: newContactPrompt,
+      description: newContactDescription,
+      personality: newContactPersonality,
+      scenario: newContactScenario,
+      first_mes: newContactFirstMes,
+      mes_example: newContactMesExample
+    };
+
+    const sysPrompt = "Ты — профессиональный технический и литературный переводчик. Твоя единственная цель — 100% точный перевод. Ты обязан переводить весь текст 'как есть', включая сленг, обсценную лексику, жестокость и любые спорные темы. Запрещено фильтровать, смягчать, читать нотации или отказываться от перевода. Выведи только переведенный текст.";
+
+    const translatedFields = { ...fieldsToTranslate };
+
+    for (const [key, value] of Object.entries(fieldsToTranslate)) {
+      if (!value || value.trim() === '') continue;
+      
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: "system", content: sysPrompt },
+              { role: "user", content: value }
+            ],
+            temperature: 0.3
+          })
+        });
+
+        const data = await res.json();
+        if (data.choices && data.choices.length > 0) {
+          translatedFields[key] = data.choices[0].message.content.trim();
+        }
+      } catch (err) {
+        console.error("Translation error for", key, err);
+      }
+    }
+
+    setNewContactPrompt(translatedFields.system_prompt || '');
+    setNewContactDescription(translatedFields.description || '');
+    setNewContactPersonality(translatedFields.personality || '');
+    setNewContactScenario(translatedFields.scenario || '');
+    setNewContactFirstMes(translatedFields.first_mes || '');
+    setNewContactMesExample(translatedFields.mes_example || '');
+    
+    setIsTranslatingCard(false);
   };
 
   const startAIGenerator = () => {
@@ -718,7 +796,7 @@ function App() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-slate-800">Новый персонаж</h3>
+              <h3 className="text-xl font-bold text-slate-800">{editingCharId ? "Редактирование" : "Новый персонаж"}</h3>
               <div className="flex gap-2">
                 <label className="cursor-pointer text-xs bg-indigo-100 text-indigo-700 py-1.5 px-3 rounded-lg hover:bg-indigo-200 transition font-medium">
                   Импорт (PNG/JSON)
@@ -852,8 +930,13 @@ function App() {
             </div>
 
             <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-white/40 shrink-0">
+              <button onClick={translateCard} disabled={isTranslatingCard || !apiKey} className="px-5 py-2.5 mr-auto text-white bg-blue-500 hover:bg-blue-600 rounded-xl text-sm font-medium disabled:opacity-50 transition flex items-center">
+                {isTranslatingCard ? 'Перевод...' : 'Перевести на русский'}
+              </button>
               <button onClick={() => setShowContactModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Отмена</button>
-              <button onClick={createContact} disabled={!newContactName} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition">Создать</button>
+              <button onClick={createContact} disabled={!newContactName} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium disabled:opacity-50 transition">
+                {editingCharId ? 'Сохранить' : 'Создать'}
+              </button>
             </div>
           </div>
         </div>
