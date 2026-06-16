@@ -28,8 +28,29 @@ function App() {
   const [storySlots, setStorySlots] = useState({});
 
   const [tempApiKey, setTempApiKey] = useState('');
+  const [balance, setBalance] = useState(null);
 
   const activeChat = chats.find(c => c.id === activeChatId);
+
+  const fetchBalance = async () => {
+    if (!apiKey) return;
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/credits', {
+        headers: { Authorization: `Bearer ${apiKey}` }
+      });
+      const data = await res.json();
+      if (data && data.data) {
+        const remaining = (data.data.total_credits || 0) - (data.data.total_usage || 0);
+        setBalance(remaining.toFixed(4));
+      }
+    } catch (err) {
+      console.error("Failed to fetch balance", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchBalance();
+  }, [apiKey]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -163,6 +184,7 @@ function App() {
       
       if (aiMessage) {
         addMessageToChat(activeChatId, aiMessage);
+        fetchBalance();
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -213,7 +235,10 @@ function App() {
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 w-80 bg-white shadow-xl z-30 transform transition-transform duration-300 md:relative md:translate-x-0 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-indigo-50/50">
-          <h2 className="font-bold text-gray-800 text-lg">Private AI</h2>
+          <div>
+            <h2 className="font-bold text-gray-800 text-lg leading-tight">Private AI</h2>
+            {balance !== null && <p className="text-xs text-green-600 font-medium mt-0.5">Баланс: ${balance}</p>}
+          </div>
           <div className="flex items-center gap-2">
             <button className="text-gray-500 hover:text-indigo-600 transition p-1" onClick={() => { setTempApiKey(apiKey); setShowSettingsModal(true); }}>
               <Settings className="w-5 h-5" />
