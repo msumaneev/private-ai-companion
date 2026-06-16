@@ -259,7 +259,8 @@ function App() {
             "X-Title": "Private AI Companion"
           },
           body: JSON.stringify({
-            model: model,
+            models: [model, "meta-llama/llama-3.3-70b-instruct", "mistralai/mistral-nemo"],
+            route: "fallback",
             messages: [
               { role: "system", content: sysPrompt },
               { role: "user", content: value }
@@ -434,9 +435,15 @@ function App() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': window.location.href,
+          'X-Title': 'Private AI Companion'
         },
-        body: JSON.stringify({ messages: openRouterMessages, model: selectedModel }),
+        body: JSON.stringify({ 
+          models: [selectedModel, "meta-llama/llama-3.3-70b-instruct", "mistralai/mistral-nemo"], 
+          route: "fallback",
+          messages: openRouterMessages 
+        }),
       });
 
       if (!response.ok) {
@@ -448,6 +455,10 @@ function App() {
       }
 
       const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error.message || JSON.stringify(data.error));
+      }
+
       const aiMessage = data.choices?.[0]?.message;
       
       if (aiMessage) {
