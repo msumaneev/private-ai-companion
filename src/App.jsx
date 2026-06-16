@@ -188,9 +188,7 @@ function App() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': window.location.href,
-          'X-Title': 'Private AI Companion'
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({ messages: openRouterMessages, model: selectedModel }),
       });
