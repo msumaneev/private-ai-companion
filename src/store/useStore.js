@@ -33,6 +33,14 @@ export const useStore = create(
           ),
         }));
       },
+
+      clearChatMessages: (chatId) => {
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId ? { ...chat, messages: [] } : chat
+          ),
+        }));
+      },
     }),
     {
       name: 'private-ai-companion-storage',

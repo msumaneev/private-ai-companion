@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings } from 'lucide-react';
+import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2 } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, setActiveChatId, addCharacter, addChat, addMessageToChat } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, setActiveChatId, addCharacter, addChat, addMessageToChat, clearChatMessages } = useStore();
   
   const [model, setModel] = useState('meta-llama/llama-3.1-70b-instruct');
   
@@ -367,16 +367,28 @@ function App() {
             <div className="flex-1 text-gray-500 font-medium">Выберите чат</div>
           )}
 
-          <div>
+          <div className="flex items-center">
             <select 
               value={model} 
               onChange={(e) => setModel(e.target.value)}
-              className="text-xs bg-gray-50 border border-gray-200 text-gray-700 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 max-w-[120px] sm:max-w-none disabled:opacity-50"
+              className="text-xs bg-gray-50 border border-gray-200 text-gray-700 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-2"
             >
               <option value="google/gemini-2.0-flash:free">Gemini 2.0 Flash (Free)</option>
               <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
               <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B</option>
             </select>
+            
+            <button 
+              onClick={() => {
+                if (window.confirm('Вы уверены, что хотите очистить историю сообщений в этом чате?')) {
+                  clearChatMessages(activeChat.id);
+                }
+              }}
+              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              title="Очистить чат"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
           </div>
         </header>
 
