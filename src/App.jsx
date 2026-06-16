@@ -156,7 +156,6 @@ function App() {
       finalSystemPrompt = `[ГЛОБАЛЬНЫЙ СЦЕНАРИЙ]: ${activeChat.world_context || ''}. [УЧАСТНИКИ]: ${charsDesc}. СТРОГОЕ ПРАВИЛО: Каждую свою реплику начинай с имени персонажа в формате "Имя:". Отвечай только за заявленных персонажей. Никогда не пиши действия или реплики за Пользователя.`;
     } else if (activeChat.type === 'generator') {
       finalSystemPrompt = `Ты — эксперт по созданию глубоких, живых и нешаблонных персонажей для ролевых игр. Пользователь опишет тебе свою идею (например, "нужна строгая начальница" или "веселый бармен"). Твоя задача — придумать персонажу реалистичное имя, глубокий характер, скрытые мотивы, страхи и манеру общения.\n\nКогда анкета персонажа согласована с пользователем, ты ОБЯЗАН выдать результат в формате JSON внутри тегов <character type="application/json">. Структура: { "name": "Имя персонажа", "avatar_emoji": "🎭", "system_prompt": "Детальный промпт для этого персонажа. Опиши его роль, характер, стиль речи и правила поведения от первого лица или в директивном тоне. Этот текст будет управлять поведением ИИ в будущем чате." }`;
-      selectedModel = "meta-llama/llama-3.3-70b-instruct";
     }
 
     const updatedMessages = [...activeChat.messages, userMessage];
@@ -372,7 +371,6 @@ function App() {
             <select 
               value={model} 
               onChange={(e) => setModel(e.target.value)}
-              disabled={activeChat?.type === 'generator'}
               className="text-xs bg-gray-50 border border-gray-200 text-gray-700 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 max-w-[120px] sm:max-w-none disabled:opacity-50"
             >
               <option value="google/gemini-2.0-flash:free">Gemini 2.0 Flash (Free)</option>
