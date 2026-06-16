@@ -401,9 +401,10 @@ function App() {
             >
               <option value="sao10k/l3.3-euryale-70b">Euryale Llama 3.3 70B (Uncensored)</option>
               <option value="anthracite-org/magnum-v4-72b">Magnum v4 72B (Uncensored)</option>
+              <option value="alpindale/goliath-120b">Goliath 120B (Uncensored)</option>
               <option value="nousresearch/hermes-3-llama-3.1-405b">Hermes 3 405B (Uncensored)</option>
-              <option value="cognitivecomputations/dolphin-mistral-24b-venice-edition:free">Dolphin Venice (Free, Uncensored)</option>
-              <option value="google/gemini-2.0-flash:free">Gemini 2.0 Flash (Free, Censor)</option>
+              <option value="sophosympatheia/midnight-miqu-14x8b">Midnight Miqu 103B (Uncensored)</option>
+              <option value="neversleep/noromaid-20b">Noromaid 20B (Uncensored)</option>
             </select>
             
             {activeChat && (
