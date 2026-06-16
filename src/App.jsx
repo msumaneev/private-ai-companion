@@ -104,6 +104,21 @@ function App() {
     setIsSidebarOpen(false);
   };
 
+  const startAIPlotGenerator = () => {
+    let plotGenChat = chats.find(c => c.type === 'plot_generator');
+    if (!plotGenChat) {
+      plotGenChat = addChat({
+        type: 'plot_generator',
+        name: 'AI Генератор Сюжетов',
+        avatarBase64: null,
+        characterIds: []
+      });
+    } else {
+      setActiveChatId(plotGenChat.id);
+    }
+    setIsSidebarOpen(false);
+  };
+
   const createStory = () => {
     if (!selectedScenario) return;
     const slotsCount = selectedScenario.required_characters_count;
@@ -158,6 +173,8 @@ function App() {
       finalSystemPrompt = `[ГЛОБАЛЬНЫЙ СЦЕНАРИЙ]: ${activeChat.world_context || ''}. [УЧАСТНИКИ]: ${charsDesc}. СТРОГОЕ ПРАВИЛО: Каждую свою реплику начинай с имени персонажа в формате "Имя:". Отвечай только за заявленных персонажей. Никогда не пиши действия или реплики за Пользователя.`;
     } else if (activeChat.type === 'generator') {
       finalSystemPrompt = `Ты — эксперт по созданию глубоких, живых и нешаблонных персонажей для ролевых игр. Пользователь опишет тебе свою идею (например, "нужна строгая начальница" или "веселый бармен"). Твоя задача — придумать персонажу реалистичное имя, глубокий характер, скрытые мотивы, страхи и манеру общения.\n\nКогда анкета персонажа согласована с пользователем, ты ОБЯЗАН выдать результат в формате JSON внутри тегов <character type="application/json">. Структура: { "name": "Имя персонажа", "avatar_emoji": "🎭", "system_prompt": "Детальный промпт для этого персонажа. Опиши его роль, характер, стиль речи и правила поведения от первого лица или в директивном тоне. Этот текст будет управлять поведением ИИ в будущем чате." }`;
+    } else if (activeChat.type === 'plot_generator') {
+      finalSystemPrompt = `Ты — эксперт по созданию увлекательных сценариев (сюжетов) для текстовых ролевых игр. Пользователь опишет свою задумку, а ты должен помочь развить ее в полноценный сеттинг.\n\nЗадавай уточняющие вопросы, предлагай интересные конфликты и завязки. Когда сюжет согласован, помоги пользователю красиво сформулировать "Название сюжета" и "Контекст/Сеттинг" для создания сценария в приложении. Форматируй свой ответ красиво, используя markdown.`;
     }
 
     const updatedMessages = [...activeChat.messages, userMessage];
@@ -202,7 +219,7 @@ function App() {
   };
 
   const parseMessageContent = (content, chatType) => {
-    if (chatType === 'single' || chatType === 'generator') return { speaker: null, text: content };
+    if (chatType === 'single' || chatType === 'generator' || chatType === 'plot_generator') return { speaker: null, text: content };
     const match = content.match(/^([^:]+):\s*(.*)/s);
     if (match) {
       return { speaker: match[1].trim(), text: match[2] };
@@ -296,22 +313,22 @@ function App() {
             </>
           ) : (
             <>
-              {chats.filter(c => c.type === 'group').map(chat => (
+              {chats.filter(c => c.type === 'group' || c.type === 'plot_generator').map(chat => (
                 <div 
                   key={chat.id} 
                   onClick={() => { setActiveChatId(chat.id); setIsSidebarOpen(false); }}
                   className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
                 >
                   <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
-                    <Users className="text-indigo-500 w-5 h-5" />
+                    {chat.type === 'plot_generator' ? <Sparkles className="text-indigo-500 w-5 h-5" /> : <Users className="text-indigo-500 w-5 h-5" />}
                   </div>
                   <div className="overflow-hidden flex-1">
                     <h3 className="font-medium text-gray-800 text-sm truncate">{chat.name}</h3>
-                    <p className="text-xs text-gray-500 truncate">{chat.characterIds.length} участников</p>
+                    <p className="text-xs text-gray-500 truncate">{chat.type === 'plot_generator' ? 'Служебный чат' : `${chat.characterIds.length} участников`}</p>
                   </div>
                 </div>
               ))}
-              {chats.filter(c => c.type === 'group').length === 0 && (
+              {chats.filter(c => c.type === 'group' || c.type === 'plot_generator').length === 0 && (
                 <div className="text-center text-gray-400 text-sm mt-10">Нет активных сюжетов</div>
               )}
             </>
@@ -335,12 +352,20 @@ function App() {
               </button>
             </>
           ) : (
-            <button 
-              onClick={() => setShowStoryModal(true)}
-              className="flex items-center justify-center w-full py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-medium hover:bg-indigo-600 transition-colors shadow-sm"
-            >
-              <BookOpen className="w-4 h-4 mr-1.5" /> Начать сюжет
-            </button>
+            <>
+              <button 
+                onClick={() => setShowStoryModal(true)}
+                className="flex items-center justify-center w-full py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-medium hover:bg-indigo-600 transition-colors shadow-sm"
+              >
+                <BookOpen className="w-4 h-4 mr-1.5" /> Начать сюжет
+              </button>
+              <button 
+                onClick={startAIPlotGenerator}
+                className="flex items-center justify-center w-full py-2.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl text-sm font-medium hover:bg-indigo-100 transition-colors shadow-sm mt-2"
+              >
+                <Sparkles className="w-4 h-4 mr-1.5" /> Сгенерировать с ИИ
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -357,12 +382,13 @@ function App() {
             <>
               <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0 border border-indigo-50">
                 {activeChat.type === 'generator' ? <Bot className="text-indigo-500 w-6 h-6" /> : 
+                 activeChat.type === 'plot_generator' ? <Sparkles className="text-indigo-500 w-6 h-6" /> : 
                  activeChat.type === 'group' ? <Users className="text-indigo-500 w-6 h-6" /> : 
                  renderAvatar(activeChat.avatarBase64)}
               </div>
               <div className="flex-1 overflow-hidden mr-2">
                 <h1 className="font-semibold text-gray-800 text-lg leading-tight truncate">{activeChat.name}</h1>
-                <p className="text-xs text-gray-500">{activeChat.type === 'group' ? `${activeChat.characterIds.length} персонажей` : (activeChat.type === 'generator' ? 'Генерация персонажа' : 'Online')}</p>
+                <p className="text-xs text-gray-500">{activeChat.type === 'group' ? `${activeChat.characterIds.length} персонажей` : (activeChat.type === 'generator' ? 'Генерация персонажа' : (activeChat.type === 'plot_generator' ? 'Генерация сюжета' : 'Online'))}</p>
               </div>
             </>
           ) : (
@@ -410,6 +436,8 @@ function App() {
               <div className="inline-block p-4 rounded-2xl bg-white border border-indigo-50 shadow-sm text-sm text-gray-500 max-w-sm">
                 {activeChat.type === 'generator' ? 
                   "Опишите персонажа, которого хотите создать (например: 'Суровый капитан космического корабля' или 'Милая девушка-бариста с секретом')." :
+                  activeChat.type === 'plot_generator' ?
+                  "Опишите вашу идею для сюжета. Модель поможет вам расписать сеттинг, конфликт и детали мира." :
                   activeChat.type === 'group' ?
                   `Сюжет: ${activeChat.world_context}` :
                   "Нет сообщений. Начните общение!"
