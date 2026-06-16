@@ -152,7 +152,38 @@ function App() {
     try {
       const res = await fetch(`https://api.chub.ai/search?search=${encodeURIComponent(chubQuery)}&first=30`);
       const data = await res.json();
-      setChubResults(data.data?.nodes || data.nodes || []);
+      const nodes = data.data?.nodes || data.nodes || [];
+      
+      // Показываем результаты сразу
+      setChubResults(nodes);
+      
+      // Асинхронно переводим описания через Google Translate (бесплатный API)
+      const translateNodes = async () => {
+        let currentNodes = [...nodes];
+        for (let i = 0; i < currentNodes.length; i++) {
+          const char = currentNodes[i];
+          const text = char.tagline || char.description || '';
+          if (text) {
+            try {
+              const trRes = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ru&dt=t&q=${encodeURIComponent(text.slice(0, 500))}`);
+              const trData = await trRes.json();
+              let translatedText = '';
+              if (trData && trData[0]) {
+                trData[0].forEach(t => { if (t[0]) translatedText += t[0] });
+              }
+              if (translatedText) {
+                currentNodes[i] = { ...char, translatedTagline: translatedText };
+                setChubResults([...currentNodes]);
+              }
+            } catch (err) {
+              // Игнорируем ошибки перевода, чтобы не спамить
+            }
+          }
+        }
+      };
+      
+      translateNodes();
+      
     } catch (err) {
       alert('Ошибка поиска: ' + err.message);
     }
@@ -969,11 +1000,11 @@ function App() {
               {chubResults.map(char => (
                 <div key={char.id} className="bg-white/40 backdrop-blur-xl border border-white/50 p-3 rounded-xl flex items-start gap-3 hover:bg-white/50 transition">
                   <div className="w-16 h-16 rounded-lg bg-indigo-50 shrink-0 overflow-hidden">
-                    {char.avatar_url && <img src={`https://avatars.charhub.io/avatars/${char.avatar_url}`} className="w-full h-full object-cover" />}
+                    {char.fullPath && <img src={`https://avatars.charhub.io/avatars/${char.fullPath}/chara_card_v2.png`} onError={(e) => { e.target.onerror = null; e.target.src = `https://avatars.charhub.io/avatars/${char.fullPath}/avatar.webp`; }} className="w-full h-full object-cover" />}
                   </div>
                   <div className="flex-1 overflow-hidden">
                     <h4 className="font-bold text-slate-800 text-sm truncate">{char.name}</h4>
-                    <p className="text-xs text-slate-800/70 line-clamp-2 mt-1">{char.tagline || char.description}</p>
+                    <p className="text-xs text-slate-800/70 line-clamp-2 mt-1">{char.translatedTagline || char.tagline || char.description}</p>
                     <button onClick={() => importFromChub(char.fullPath)} className="mt-2 text-xs font-medium bg-violet-400 text-white px-3 py-1.5 rounded-lg hover:bg-violet-500 transition w-full">
                       Добавить в чат
                     </button>
