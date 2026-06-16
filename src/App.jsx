@@ -249,46 +249,58 @@ function App() {
       if (!value || value.trim() === '') continue;
       if (hasError) break;
       
-      try {
-        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": window.location.href,
-            "X-Title": "Private AI Companion"
-          },
-          body: JSON.stringify({
-            models: [model, "meta-llama/llama-3.3-70b-instruct", "mistralai/mistral-nemo"],
-            route: "fallback",
-            messages: [
-              { role: "system", content: sysPrompt },
-              { role: "user", content: value }
-            ],
-            temperature: 0.1
-          })
-        });
+      let success = false;
+      let attemptModels = [model, "google/gemini-2.5-flash-exp:free", "mistralai/mistral-nemo:free", "meta-llama/llama-3.3-70b-instruct:free"];
+      let lastError = null;
 
-        const data = await res.json();
-        if (data.error) {
-          alert("Ошибка OpenRouter: " + (data.error.message || JSON.stringify(data.error)));
-          hasError = true;
-          break;
-        }
+      for (let attemptModel of attemptModels) {
+        try {
+          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey.trim()}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": window.location.href,
+              "X-Title": "Private AI Companion"
+            },
+            body: JSON.stringify({
+              model: attemptModel,
+              messages: [
+                { role: "system", content: sysPrompt },
+                { role: "user", content: value }
+              ],
+              temperature: 0.1
+            })
+          });
 
-        if (data.choices && data.choices.length > 0) {
-          const result = data.choices[0].message.content.trim();
-          if (key === 'system_prompt') setNewContactPrompt(result);
-          if (key === 'description') setNewContactDescription(result);
-          if (key === 'personality') setNewContactPersonality(result);
-          if (key === 'scenario') setNewContactScenario(result);
-          if (key === 'first_mes') setNewContactFirstMes(result);
-          if (key === 'mes_example') setNewContactMesExample(result);
+          const data = await res.json();
+          if (data.error) {
+             console.warn(`Model ${attemptModel} failed:`, data.error);
+             lastError = data.error.message || JSON.stringify(data.error);
+             continue; // try next model
+          }
+
+          if (data.choices && data.choices.length > 0) {
+            const result = data.choices[0].message.content.trim();
+            if (key === 'system_prompt') setNewContactPrompt(result);
+            if (key === 'description') setNewContactDescription(result);
+            if (key === 'personality') setNewContactPersonality(result);
+            if (key === 'scenario') setNewContactScenario(result);
+            if (key === 'first_mes') setNewContactFirstMes(result);
+            if (key === 'mes_example') setNewContactMesExample(result);
+            success = true;
+            break; // successfully translated this field!
+          }
+        } catch (err) {
+          console.error("Network error with model", attemptModel, err);
+          lastError = err.message;
         }
-      } catch (err) {
-        console.error("Translation error for", key, err);
-        alert("Сетевая ошибка при переводе: " + err.message);
+      }
+
+      if (!success) {
+        alert(`Не удалось перевести поле. Ошибка: ${lastError}`);
         hasError = true;
+        break;
       }
     }
     
