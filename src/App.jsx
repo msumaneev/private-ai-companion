@@ -408,33 +408,37 @@ function App() {
               <option value="google/gemini-2.0-flash:free">Gemini 2.0 Flash (Free, Censor)</option>
             </select>
             
-            <button 
-              onClick={() => {
-                if (window.confirm('Вы уверены, что хотите очистить историю сообщений в этом чате?')) {
-                  clearChatMessages(activeChat.id);
-                }
-              }}
-              className="p-2 text-slate-800/50 hover:text-fuchsia-600 hover:bg-white/50 rounded-lg transition-colors mr-1"
-              title="Очистить историю сообщений"
-            >
-              <Eraser className="w-5 h-5" />
-            </button>
+            {activeChat && (
+              <>
+                <button 
+                  onClick={() => {
+                    if (window.confirm('Вы уверены, что хотите очистить историю сообщений в этом чате?')) {
+                      clearChatMessages(activeChat.id);
+                    }
+                  }}
+                  className="p-2 text-slate-800/50 hover:text-fuchsia-600 hover:bg-white/50 rounded-lg transition-colors mr-1"
+                  title="Очистить историю сообщений"
+                >
+                  <Eraser className="w-5 h-5" />
+                </button>
 
-            <button 
-              onClick={() => {
-                let msg = 'Вы уверены, что хотите полностью удалить этот чат?';
-                if (activeChat.type === 'single') msg = 'Вы уверены, что хотите удалить этот чат и этого персонажа навсегда?';
-                if (activeChat.type === 'group') msg = 'Вы уверены, что хотите удалить этот сюжет?';
-                
-                if (window.confirm(msg)) {
-                  deleteChat(activeChat.id);
-                }
-              }}
-              className="p-2 text-slate-800/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-              title={activeChat.type === 'single' ? "Удалить чат и персонажа" : "Удалить чат"}
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
+                <button 
+                  onClick={() => {
+                    let msg = 'Вы уверены, что хотите полностью удалить этот чат?';
+                    if (activeChat.type === 'single') msg = 'Вы уверены, что хотите удалить этот чат и этого персонажа навсегда?';
+                    if (activeChat.type === 'group') msg = 'Вы уверены, что хотите удалить этот сюжет?';
+                    
+                    if (window.confirm(msg)) {
+                      deleteChat(activeChat.id);
+                    }
+                  }}
+                  className="p-2 text-slate-800/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title={activeChat.type === 'single' ? "Удалить чат и персонажа" : "Удалить чат"}
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </>
+            )}
           </div>
         </header>
 
