@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: companion_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./data/ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Placeholder for TTS/STT API wrapper
+  # In a real environment, you'd use a custom image with F5-TTS and Whisper
+  audio_api:
+    image: python:3.10-slim
+    container_name: companion_audio
+    command: >
+      bash -c "pip install fastapi uvicorn && uvicorn main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./audio_service:/app
+    working_dir: /app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  init_script:
+    image: curlimages/curl:latest
+    container_name: companion_init
+    depends_on:
+      - ollama
+    command: >
+      sh -c "sleep 10 && curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"llama3\"}'"
