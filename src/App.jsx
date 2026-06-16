@@ -257,32 +257,32 @@ function App() {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 w-80 bg-white/10 backdrop-blur-xl border border-white/20 shadow-xl z-30 transform transition-transform duration-300 md:relative md:translate-x-0 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/20/50">
+      <div className={`fixed inset-y-0 left-0 w-80 bg-white/40 backdrop-blur-xl border border-white/50 shadow-xl z-30 transform transition-transform duration-300 md:relative md:translate-x-0 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-4 border-b border-white/40 flex justify-between items-center bg-white/50/50">
           <div>
-            <h2 className="font-bold text-white text-lg leading-tight">Private AI</h2>
+            <h2 className="font-bold text-slate-800 text-lg leading-tight">Private AI</h2>
             {balance !== null && <p className="text-xs text-green-600 font-medium mt-0.5">Баланс: ${balance}</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button className="text-white/70 hover:text-fuchsia-400 transition p-1" onClick={() => { setTempApiKey(apiKey); setShowSettingsModal(true); }}>
+            <button className="text-slate-800/70 hover:text-fuchsia-600 transition p-1" onClick={() => { setTempApiKey(apiKey); setShowSettingsModal(true); }}>
               <Settings className="w-5 h-5" />
             </button>
-            <button className="md:hidden text-white/70 p-1" onClick={() => setIsSidebarOpen(false)}>
+            <button className="md:hidden text-slate-800/70 p-1" onClick={() => setIsSidebarOpen(false)}>
               <X className="w-6 h-6" />
             </button>
           </div>
         </div>
         
         {/* Tabs */}
-        <div className="flex border-b border-white/10 shrink-0">
+        <div className="flex border-b border-white/40 shrink-0">
           <button 
-            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${activeTab === 'contacts' ? 'text-fuchsia-400 border-b-2 border-indigo-600' : 'text-white/70 hover:text-white/90'}`}
+            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${activeTab === 'contacts' ? 'text-fuchsia-600 border-b-2 border-indigo-600' : 'text-slate-800/70 hover:text-slate-800/90'}`}
             onClick={() => setActiveTab('contacts')}
           >
             <User className="w-4 h-4" /> Контакты
           </button>
           <button 
-            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${activeTab === 'stories' ? 'text-fuchsia-400 border-b-2 border-indigo-600' : 'text-white/70 hover:text-white/90'}`}
+            className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 ${activeTab === 'stories' ? 'text-fuchsia-600 border-b-2 border-indigo-600' : 'text-slate-800/70 hover:text-slate-800/90'}`}
             onClick={() => setActiveTab('stories')}
           >
             <BookOpen className="w-4 h-4" /> Сюжеты
@@ -296,19 +296,19 @@ function App() {
                 <div 
                   key={chat.id} 
                   onClick={() => { setActiveChatId(chat.id); setIsSidebarOpen(false); }}
-                  className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-white/20' : 'hover:bg-white/5'}`}
+                  className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-white/50' : 'hover:bg-white/60'}`}
                 >
-                  <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
-                    {chat.type === 'generator' ? <Bot className="text-fuchsia-400 w-5 h-5" /> : renderAvatar(chat.avatarBase64)}
+                  <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                    {chat.type === 'generator' ? <Bot className="text-fuchsia-600 w-5 h-5" /> : renderAvatar(chat.avatarBase64)}
                   </div>
                   <div className="overflow-hidden">
-                    <h3 className="font-medium text-white text-sm truncate">{chat.name}</h3>
-                    <p className="text-xs text-white/70 truncate">{chat.type === 'generator' ? 'Служебный чат' : 'Тет-а-тет'}</p>
+                    <h3 className="font-medium text-slate-800 text-sm truncate">{chat.name}</h3>
+                    <p className="text-xs text-slate-800/70 truncate">{chat.type === 'generator' ? 'Служебный чат' : 'Тет-а-тет'}</p>
                   </div>
                 </div>
               ))}
               {chats.filter(c => c.type === 'single' || c.type === 'generator').length === 0 && (
-                <div className="text-center text-white/50 text-sm mt-10">Нет контактов</div>
+                <div className="text-center text-slate-800/50 text-sm mt-10">Нет контактов</div>
               )}
             </>
           ) : (
@@ -317,30 +317,30 @@ function App() {
                 <div 
                   key={chat.id} 
                   onClick={() => { setActiveChatId(chat.id); setIsSidebarOpen(false); }}
-                  className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-white/20' : 'hover:bg-white/5'}`}
+                  className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-white/50' : 'hover:bg-white/60'}`}
                 >
-                  <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
-                    {chat.type === 'plot_generator' ? <Sparkles className="text-fuchsia-400 w-5 h-5" /> : <Users className="text-fuchsia-400 w-5 h-5" />}
+                  <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                    {chat.type === 'plot_generator' ? <Sparkles className="text-fuchsia-600 w-5 h-5" /> : <Users className="text-fuchsia-600 w-5 h-5" />}
                   </div>
                   <div className="overflow-hidden flex-1">
-                    <h3 className="font-medium text-white text-sm truncate">{chat.name}</h3>
-                    <p className="text-xs text-white/70 truncate">{chat.type === 'plot_generator' ? 'Служебный чат' : `${chat.characterIds.length} участников`}</p>
+                    <h3 className="font-medium text-slate-800 text-sm truncate">{chat.name}</h3>
+                    <p className="text-xs text-slate-800/70 truncate">{chat.type === 'plot_generator' ? 'Служебный чат' : `${chat.characterIds.length} участников`}</p>
                   </div>
                 </div>
               ))}
               {chats.filter(c => c.type === 'group' || c.type === 'plot_generator').length === 0 && (
-                <div className="text-center text-white/50 text-sm mt-10">Нет активных сюжетов</div>
+                <div className="text-center text-slate-800/50 text-sm mt-10">Нет активных сюжетов</div>
               )}
             </>
           )}
         </div>
 
-        <div className="p-4 border-t border-white/10 flex flex-col gap-2 shrink-0 bg-transparent">
+        <div className="p-4 border-t border-white/40 flex flex-col gap-2 shrink-0 bg-transparent">
           {activeTab === 'contacts' ? (
             <>
               <button 
                 onClick={() => setShowContactModal(true)}
-                className="flex items-center justify-center w-full py-2.5 bg-white/10 backdrop-blur-xl border border-white/20 border border-indigo-200 text-fuchsia-400 rounded-xl text-sm font-medium hover:bg-white/20 transition-colors shadow-sm"
+                className="flex items-center justify-center w-full py-2.5 bg-white/40 backdrop-blur-xl border border-white/50 border border-indigo-200 text-fuchsia-600 rounded-xl text-sm font-medium hover:bg-white/50 transition-colors shadow-sm"
               >
                 <Plus className="w-4 h-4 mr-1.5" /> Создать вручную
               </button>
@@ -361,7 +361,7 @@ function App() {
               </button>
               <button 
                 onClick={startAIPlotGenerator}
-                className="flex items-center justify-center w-full py-2.5 bg-white/20 text-fuchsia-400 border border-indigo-200 rounded-xl text-sm font-medium hover:bg-white/30 transition-colors shadow-sm mt-2"
+                className="flex items-center justify-center w-full py-2.5 bg-white/50 text-fuchsia-600 border border-indigo-200 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm mt-2"
               >
                 <Sparkles className="w-4 h-4 mr-1.5" /> Сгенерировать с ИИ
               </button>
@@ -373,33 +373,33 @@ function App() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col max-w-full h-full overflow-hidden">
         {/* Header */}
-        <header className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-sm p-4 flex items-center shrink-0 z-10 h-[72px]">
-          <button className="md:hidden mr-3 text-white/80" onClick={() => setIsSidebarOpen(true)}>
+        <header className="bg-white/40 backdrop-blur-xl border border-white/50 shadow-sm p-4 flex items-center shrink-0 z-10 h-[72px]">
+          <button className="md:hidden mr-3 text-slate-800/80" onClick={() => setIsSidebarOpen(true)}>
             <Menu className="w-6 h-6" />
           </button>
           
           {activeChat ? (
             <>
-              <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0 border border-indigo-50">
-                {activeChat.type === 'generator' ? <Bot className="text-fuchsia-400 w-6 h-6" /> : 
-                 activeChat.type === 'plot_generator' ? <Sparkles className="text-fuchsia-400 w-6 h-6" /> : 
-                 activeChat.type === 'group' ? <Users className="text-fuchsia-400 w-6 h-6" /> : 
+              <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0 border border-indigo-50">
+                {activeChat.type === 'generator' ? <Bot className="text-fuchsia-600 w-6 h-6" /> : 
+                 activeChat.type === 'plot_generator' ? <Sparkles className="text-fuchsia-600 w-6 h-6" /> : 
+                 activeChat.type === 'group' ? <Users className="text-fuchsia-600 w-6 h-6" /> : 
                  renderAvatar(activeChat.avatarBase64)}
               </div>
               <div className="flex-1 overflow-hidden mr-2">
-                <h1 className="font-semibold text-white text-lg leading-tight truncate">{activeChat.name}</h1>
-                <p className="text-xs text-white/70">{activeChat.type === 'group' ? `${activeChat.characterIds.length} персонажей` : (activeChat.type === 'generator' ? 'Генерация персонажа' : (activeChat.type === 'plot_generator' ? 'Генерация сюжета' : 'Online'))}</p>
+                <h1 className="font-semibold text-slate-800 text-lg leading-tight truncate">{activeChat.name}</h1>
+                <p className="text-xs text-slate-800/70">{activeChat.type === 'group' ? `${activeChat.characterIds.length} персонажей` : (activeChat.type === 'generator' ? 'Генерация персонажа' : (activeChat.type === 'plot_generator' ? 'Генерация сюжета' : 'Online'))}</p>
               </div>
             </>
           ) : (
-            <div className="flex-1 text-white/70 font-medium">Выберите чат</div>
+            <div className="flex-1 text-slate-800/70 font-medium">Выберите чат</div>
           )}
 
           <div className="flex items-center">
             <select 
               value={model} 
               onChange={(e) => setModel(e.target.value)}
-              className="text-xs bg-white/5 border border-white/20 text-white/90 rounded-lg p-2 outline-none focus:ring-2 focus:ring-fuchsia-500 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-2"
+              className="text-xs bg-white/60 border border-white/50 text-slate-800/90 rounded-lg p-2 outline-none focus:ring-2 focus:ring-fuchsia-500 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-2"
             >
               <option value="sao10k/l3.3-euryale-70b">Euryale Llama 3.3 70B (Uncensored)</option>
               <option value="anthracite-org/magnum-v4-72b">Magnum v4 72B (Uncensored)</option>
@@ -414,7 +414,7 @@ function App() {
                   clearChatMessages(activeChat.id);
                 }
               }}
-              className="p-2 text-white/50 hover:text-fuchsia-400 hover:bg-white/20 rounded-lg transition-colors mr-1"
+              className="p-2 text-slate-800/50 hover:text-fuchsia-600 hover:bg-white/50 rounded-lg transition-colors mr-1"
               title="Очистить историю сообщений"
             >
               <Eraser className="w-5 h-5" />
@@ -430,7 +430,7 @@ function App() {
                   deleteChat(activeChat.id);
                 }
               }}
-              className="p-2 text-white/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 text-slate-800/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
               title={activeChat.type === 'single' ? "Удалить чат и персонажа" : "Удалить чат"}
             >
               <Trash2 className="w-5 h-5" />
@@ -441,15 +441,15 @@ function App() {
         {/* Chat Messages */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-transparent">
           {!activeChat ? (
-            <div className="h-full flex items-center justify-center text-white/50">
+            <div className="h-full flex items-center justify-center text-slate-800/50">
               <div className="text-center">
-                <Sparkles className="w-12 h-12 text-fuchsia-200/50 mx-auto mb-3" />
+                <Sparkles className="w-12 h-12 text-fuchsia-800/50 mx-auto mb-3" />
                 <p>Выберите чат или создайте новый в меню</p>
               </div>
             </div>
           ) : activeChat.messages.length === 0 ? (
             <div className="text-center mt-10">
-              <div className="inline-block p-4 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 border border-indigo-50 shadow-sm text-sm text-white/70 max-w-sm">
+              <div className="inline-block p-4 rounded-2xl bg-white/40 backdrop-blur-xl border border-white/50 border border-indigo-50 shadow-sm text-sm text-slate-800/70 max-w-sm">
                 {activeChat.type === 'generator' ? 
                   "Опишите персонажа, которого хотите создать (например: 'Суровый капитан космического корабля' или 'Милая девушка-бариста с секретом')." :
                   activeChat.type === 'plot_generator' ?
@@ -484,35 +484,35 @@ function App() {
                 <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'} w-full`}>
                   <div className={`flex max-w-[90%] sm:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end gap-2`}>
                     {!isUser && (
-                      <div className="w-8 h-8 rounded-full bg-white/30 flex-shrink-0 flex items-center justify-center overflow-hidden mb-1 border border-indigo-50 shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-white/60 flex-shrink-0 flex items-center justify-center overflow-hidden mb-1 border border-indigo-50 shadow-sm">
                         {activeChat.type === 'generator' ? <Bot className="w-5 h-5 text-indigo-400" /> : renderAvatar(avatarSrc)}
                       </div>
                     )}
                     
                     <div className="flex flex-col">
                       {!isUser && activeChat.type === 'group' && (
-                        <span className="text-xs text-white/70 mb-1 ml-1 font-medium">{displayName}</span>
+                        <span className="text-xs text-slate-800/70 mb-1 ml-1 font-medium">{displayName}</span>
                       )}
                       <div 
                         className={`rounded-2xl p-4 ${
                           isUser 
-                            ? 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-br-sm shadow-md' 
-                            : 'bg-white/10 backdrop-blur-xl border border-white/20 text-white shadow-sm rounded-bl-sm border border-white/10'
+                            ? 'bg-fuchsia-600 hover:bg-fuchsia-500 text-slate-800 rounded-br-sm shadow-md' 
+                            : 'bg-white/40 backdrop-blur-xl border border-white/50 text-slate-800 shadow-sm rounded-bl-sm border border-white/40'
                         }`}
                       >
-                        <div className={`prose prose-sm max-w-none break-words ${isUser ? 'text-indigo-50 prose-headings:text-white prose-a:text-fuchsia-200/50 prose-strong:text-white' : 'text-white'}`}>
+                        <div className={`prose prose-sm max-w-none break-words ${isUser ? 'text-indigo-50 prose-headings:text-slate-800 prose-a:text-fuchsia-800/50 prose-strong:text-slate-800' : 'text-slate-800'}`}>
                           <ReactMarkdown>{parsed.text}</ReactMarkdown>
                         </div>
                         
                         {extractedJSON && (
-                          <div className="mt-4 p-4 bg-white/20 rounded-xl border border-indigo-100">
-                            <h4 className="font-bold text-fuchsia-100 mb-2 flex items-center gap-2">
+                          <div className="mt-4 p-4 bg-white/50 rounded-xl border border-indigo-100">
+                            <h4 className="font-bold text-fuchsia-900 mb-2 flex items-center gap-2">
                               {extractedJSON.avatar_emoji} {extractedJSON.name}
                             </h4>
-                            <p className="text-xs text-fuchsia-300 mb-4 line-clamp-3">{extractedJSON.system_prompt}</p>
+                            <p className="text-xs text-fuchsia-700 mb-4 line-clamp-3">{extractedJSON.system_prompt}</p>
                             <button 
                               onClick={() => saveExtractedCharacter(extractedJSON)}
-                              className="w-full flex justify-center items-center gap-2 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
+                              className="w-full flex justify-center items-center gap-2 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 text-slate-800 text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
                             >
                               <Plus className="w-4 h-4" /> Добавить в контакты
                             </button>
@@ -529,10 +529,10 @@ function App() {
           {isTyping && activeChat && (
             <div className="flex justify-start">
               <div className="flex items-end gap-2">
-                 <div className="w-8 h-8 rounded-full bg-white/30 flex-shrink-0 flex items-center justify-center mb-1">
+                 <div className="w-8 h-8 rounded-full bg-white/60 flex-shrink-0 flex items-center justify-center mb-1">
                    <span className="animate-pulse w-2 h-2 bg-indigo-400 rounded-full"></span>
                  </div>
-                 <div className="bg-white/10 backdrop-blur-xl border border-white/20 text-white/70 shadow-sm rounded-2xl rounded-bl-sm p-3 border border-white/10 text-sm flex items-center space-x-1">
+                 <div className="bg-white/40 backdrop-blur-xl border border-white/50 text-slate-800/70 shadow-sm rounded-2xl rounded-bl-sm p-3 border border-white/40 text-sm flex items-center space-x-1">
                    <span className="animate-bounce">.</span>
                    <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>.</span>
                    <span className="animate-bounce" style={{ animationDelay: '0.4s' }}>.</span>
@@ -544,8 +544,8 @@ function App() {
         </main>
 
         {/* Input Area */}
-        <footer className="bg-white/10 backdrop-blur-xl border border-white/20 p-3 md:p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] shrink-0 z-10">
-          <div className="max-w-4xl mx-auto flex items-end bg-white/5 rounded-2xl border border-white/20 p-1 focus-within:ring-2 focus-within:ring-fuchsia-500 focus-within:border-transparent transition-all">
+        <footer className="bg-white/40 backdrop-blur-xl border border-white/50 p-3 md:p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] shrink-0 z-10">
+          <div className="max-w-4xl mx-auto flex items-end bg-white/60 rounded-2xl border border-white/50 p-1 focus-within:ring-2 focus-within:ring-fuchsia-500 focus-within:border-transparent transition-all">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -563,7 +563,7 @@ function App() {
             <button
               onClick={handleSend}
               disabled={!input.trim() || isTyping || !activeChat}
-              className="p-3 text-fuchsia-400 disabled:text-gray-300 transition-colors hover:text-fuchsia-400"
+              className="p-3 text-fuchsia-600 disabled:text-gray-300 transition-colors hover:text-fuchsia-600"
             >
               <Send className="w-5 h-5" />
             </button>
@@ -574,16 +574,16 @@ function App() {
       {/* Modal: New Contact */}
       {showContactModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl max-w-sm w-full p-6 shadow-xl">
-            <h3 className="text-xl font-bold mb-4 text-white">Новый контакт</h3>
+          <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-sm w-full p-6 shadow-xl">
+            <h3 className="text-xl font-bold mb-4 text-slate-800">Новый контакт</h3>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-white/90 mb-2">Аватар (Опционально)</label>
+              <label className="block text-sm font-medium text-slate-800/90 mb-2">Аватар (Опционально)</label>
               <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-transparent border border-white/20 overflow-hidden flex items-center justify-center shrink-0">
-                  {newContactAvatar ? <img src={newContactAvatar} className="w-full h-full object-cover" /> : <ImageIcon className="text-white/50 w-6 h-6" />}
+                <div className="w-16 h-16 rounded-full bg-transparent border border-white/50 overflow-hidden flex items-center justify-center shrink-0">
+                  {newContactAvatar ? <img src={newContactAvatar} className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-800/50 w-6 h-6" />}
                 </div>
-                <label className="cursor-pointer bg-white/10 backdrop-blur-xl border border-white/20 border border-white/30 text-white/90 py-2 px-4 rounded-xl text-sm font-medium hover:bg-white/5 transition w-full text-center">
+                <label className="cursor-pointer bg-white/40 backdrop-blur-xl border border-white/50 border border-white/60 text-slate-800/90 py-2 px-4 rounded-xl text-sm font-medium hover:bg-white/60 transition w-full text-center">
                   Загрузить фото
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setNewContactAvatar)} />
                 </label>
@@ -591,28 +591,28 @@ function App() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-white/90 mb-1">Имя</label>
+              <label className="block text-sm font-medium text-slate-800/90 mb-1">Имя</label>
               <input 
                 type="text" 
                 value={newContactName}
                 onChange={e => setNewContactName(e.target.value)}
-                className="w-full border border-white/30 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500"
+                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500"
                 placeholder="Имя персонажа"
               />
             </div>
             
             <div className="mb-6">
-              <label className="block text-sm font-medium text-white/90 mb-1">Системный промпт / Характер</label>
+              <label className="block text-sm font-medium text-slate-800/90 mb-1">Системный промпт / Характер</label>
               <textarea 
                 value={newContactPrompt}
                 onChange={e => setNewContactPrompt(e.target.value)}
-                className="w-full border border-white/30 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 resize-none h-28"
+                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 resize-none h-28"
                 placeholder="Ты заботливый друг..."
               />
             </div>
 
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowContactModal(false)} className="px-5 py-2.5 text-white/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/20 transition">Отмена</button>
+              <button onClick={() => setShowContactModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Отмена</button>
               <button onClick={createContact} disabled={!newContactName || !newContactPrompt} className="px-5 py-2.5 text-white bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition">Создать</button>
             </div>
           </div>
@@ -622,8 +622,8 @@ function App() {
       {/* Modal: New Story */}
       {showStoryModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl max-w-md w-full p-6 shadow-xl max-h-[90vh] flex flex-col">
-            <h3 className="text-xl font-bold mb-4 text-white">Создать ролевую игру</h3>
+          <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-md w-full p-6 shadow-xl max-h-[90vh] flex flex-col">
+            <h3 className="text-xl font-bold mb-4 text-slate-800">Создать ролевую игру</h3>
             
             <div className="flex-1 overflow-y-auto pr-1">
               {!selectedScenario ? (
@@ -631,38 +631,38 @@ function App() {
                   <div className="space-y-4">
                     <button 
                       onClick={() => setIsCreatingCustomScenario(false)}
-                      className="text-sm text-fuchsia-400 hover:underline mb-2"
+                      className="text-sm text-fuchsia-600 hover:underline mb-2"
                     >
                       ← Назад к выбору сюжета
                     </button>
                     
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-white/90 mb-1">Название сюжета</label>
+                      <label className="block text-sm font-medium text-slate-800/90 mb-1">Название сюжета</label>
                       <input 
                         type="text" 
                         value={customScenarioData.title}
                         onChange={e => setCustomScenarioData(prev => ({...prev, title: e.target.value}))}
-                        className="w-full border border-white/30 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500"
+                        className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500"
                         placeholder="Например: Ограбление банка"
                       />
                     </div>
 
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-white/90 mb-1">Сеттинг / Контекст</label>
+                      <label className="block text-sm font-medium text-slate-800/90 mb-1">Сеттинг / Контекст</label>
                       <textarea 
                         value={customScenarioData.world_context}
                         onChange={e => setCustomScenarioData(prev => ({...prev, world_context: e.target.value}))}
-                        className="w-full border border-white/30 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 resize-none h-28"
+                        className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 resize-none h-28"
                         placeholder="Детальное описание мира, текущей ситуации и правил поведения персонажей..."
                       />
                     </div>
 
                     <div className="mb-6">
-                      <label className="block text-sm font-medium text-white/90 mb-1">Количество участников (персонажей)</label>
+                      <label className="block text-sm font-medium text-slate-800/90 mb-1">Количество участников (персонажей)</label>
                       <select
                         value={customScenarioData.required_characters_count}
                         onChange={e => setCustomScenarioData(prev => ({...prev, required_characters_count: parseInt(e.target.value)}))}
-                        className="w-full border border-white/30 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 bg-white/10 backdrop-blur-xl border border-white/20"
+                        className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 bg-white/40 backdrop-blur-xl border border-white/50"
                       >
                         {[1, 2, 3, 4, 5, 6, 7].map(n => <option key={n} value={n}>{n}</option>)}
                       </select>
@@ -691,25 +691,25 @@ function App() {
                   <div className="space-y-3">
                     <div 
                       onClick={() => setIsCreatingCustomScenario(true)}
-                      className="border border-indigo-200 bg-white/20/30 rounded-xl p-4 cursor-pointer hover:border-fuchsia-400 hover:bg-white/20 transition flex items-center justify-between"
+                      className="border border-indigo-200 bg-white/50/30 rounded-xl p-4 cursor-pointer hover:border-fuchsia-400 hover:bg-white/50 transition flex items-center justify-between"
                     >
                       <div>
-                        <h4 className="font-bold text-fuchsia-200 mb-1">📝 Создать свой сюжет</h4>
-                        <p className="text-xs text-fuchsia-400/80">Напишите собственную историю и выберите количество персонажей</p>
+                        <h4 className="font-bold text-fuchsia-800 mb-1">📝 Создать свой сюжет</h4>
+                        <p className="text-xs text-fuchsia-600/80">Напишите собственную историю и выберите количество персонажей</p>
                       </div>
-                      <Plus className="text-fuchsia-400 w-5 h-5" />
+                      <Plus className="text-fuchsia-600 w-5 h-5" />
                     </div>
 
-                    <p className="text-sm text-white/70 mt-4 mb-2">Или выберите готовый сюжет:</p>
+                    <p className="text-sm text-slate-800/70 mt-4 mb-2">Или выберите готовый сюжет:</p>
                     {scenarios.map(s => (
                       <div 
                         key={s.id} 
                         onClick={() => setSelectedScenario(s)}
-                        className="border border-white/20 rounded-xl p-4 cursor-pointer hover:border-fuchsia-400 hover:bg-white/20/50 transition"
+                        className="border border-white/50 rounded-xl p-4 cursor-pointer hover:border-fuchsia-400 hover:bg-white/50/50 transition"
                       >
-                        <h4 className="font-bold text-white mb-1">{s.title}</h4>
-                        <p className="text-xs text-white/70 mb-2">{s.description}</p>
-                        <div className="flex items-center text-xs text-fuchsia-400 font-medium">
+                        <h4 className="font-bold text-slate-800 mb-1">{s.title}</h4>
+                        <p className="text-xs text-slate-800/70 mb-2">{s.description}</p>
+                        <div className="flex items-center text-xs text-fuchsia-600 font-medium">
                           <Users className="w-3.5 h-3.5 mr-1" /> Требуется персонажей: {s.required_characters_count}
                         </div>
                       </div>
@@ -720,24 +720,24 @@ function App() {
                 <div className="space-y-4">
                   <button 
                     onClick={() => { setSelectedScenario(null); setStorySlots({}); }}
-                    className="text-sm text-fuchsia-400 hover:underline mb-2"
+                    className="text-sm text-fuchsia-600 hover:underline mb-2"
                   >
                     ← Назад к выбору сюжета
                   </button>
                   
-                  <div className="bg-white/20 p-4 rounded-xl border border-indigo-100 mb-4">
-                    <h4 className="font-bold text-fuchsia-100 mb-1">{selectedScenario.title}</h4>
-                    <p className="text-xs text-fuchsia-300">{selectedScenario.world_context}</p>
+                  <div className="bg-white/50 p-4 rounded-xl border border-indigo-100 mb-4">
+                    <h4 className="font-bold text-fuchsia-900 mb-1">{selectedScenario.title}</h4>
+                    <p className="text-xs text-fuchsia-700">{selectedScenario.world_context}</p>
                   </div>
 
-                  <p className="text-sm font-medium text-white/90">Назначьте персонажей на слоты:</p>
+                  <p className="text-sm font-medium text-slate-800/90">Назначьте персонажей на слоты:</p>
                   {Array.from({ length: selectedScenario.required_characters_count }).map((_, i) => (
                     <div key={i} className="mb-3">
-                      <label className="block text-xs text-white/70 mb-1">Слот {i + 1}</label>
+                      <label className="block text-xs text-slate-800/70 mb-1">Слот {i + 1}</label>
                       <select 
                         value={storySlots[i] || ''}
                         onChange={e => setStorySlots(prev => ({...prev, [i]: e.target.value}))}
-                        className="w-full border border-white/30 rounded-xl p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 bg-white/10 backdrop-blur-xl border border-white/20"
+                        className="w-full border border-white/60 rounded-xl p-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500 bg-white/40 backdrop-blur-xl border border-white/50"
                       >
                         <option value="" disabled>-- Выберите контакт --</option>
                         <option value="USER" disabled={Object.values(storySlots).includes('USER') && storySlots[i] !== 'USER'}>
@@ -758,8 +758,8 @@ function App() {
               )}
             </div>
 
-            <div className="flex gap-2 justify-end mt-6 shrink-0 pt-4 border-t border-white/10">
-              <button onClick={() => {setShowStoryModal(false); setSelectedScenario(null); setStorySlots({});}} className="px-5 py-2.5 text-white/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/20 transition">Отмена</button>
+            <div className="flex gap-2 justify-end mt-6 shrink-0 pt-4 border-t border-white/40">
+              <button onClick={() => {setShowStoryModal(false); setSelectedScenario(null); setStorySlots({});}} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Отмена</button>
               {selectedScenario && (
                 <button 
                   onClick={createStory} 
@@ -777,23 +777,23 @@ function App() {
       {/* Modal: Settings */}
       {showSettingsModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl max-w-sm w-full p-6 shadow-xl">
-            <h3 className="text-xl font-bold mb-4 text-white">Настройки</h3>
+          <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-sm w-full p-6 shadow-xl">
+            <h3 className="text-xl font-bold mb-4 text-slate-800">Настройки</h3>
             
             <div className="mb-6">
-              <label className="block text-sm font-medium text-white/90 mb-2">OpenRouter API Key</label>
+              <label className="block text-sm font-medium text-slate-800/90 mb-2">OpenRouter API Key</label>
               <input 
                 type="password" 
                 value={tempApiKey}
                 onChange={e => setTempApiKey(e.target.value)}
-                className="w-full border border-white/30 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500"
+                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-fuchsia-500"
                 placeholder="sk-or-v1-..."
               />
-              <p className="text-xs text-white/70 mt-2">Ваш ключ надежно сохраняется только в вашем браузере (локально) и никуда не передается, кроме API OpenRouter.</p>
+              <p className="text-xs text-slate-800/70 mt-2">Ваш ключ надежно сохраняется только в вашем браузере (локально) и никуда не передается, кроме API OpenRouter.</p>
             </div>
 
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowSettingsModal(false)} className="px-5 py-2.5 text-white/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/20 transition">Закрыть</button>
+              <button onClick={() => setShowSettingsModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Закрыть</button>
               <button 
                 onClick={() => { setApiKey(tempApiKey); setShowSettingsModal(false); }} 
                 className="px-5 py-2.5 text-white bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl text-sm font-medium hover:bg-indigo-700 transition"
