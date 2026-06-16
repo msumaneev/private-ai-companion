@@ -251,7 +251,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-transparent relative overflow-hidden">
+    <div className="flex h-[100dvh] bg-transparent relative overflow-hidden">
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={() => setIsSidebarOpen(false)}/>
       )}
