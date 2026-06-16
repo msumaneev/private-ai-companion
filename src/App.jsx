@@ -7,7 +7,7 @@ import scenarios from './data/scenarios.json';
 function App() {
   const { characters, chats, activeChatId, apiKey, setApiKey, setActiveChatId, addCharacter, addChat, addMessageToChat, clearChatMessages } = useStore();
   
-  const [model, setModel] = useState('meta-llama/llama-3.1-70b-instruct');
+  const [model, setModel] = useState('sao10k/l3.3-euryale-70b');
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('contacts'); // 'contacts' | 'stories'
@@ -373,9 +373,11 @@ function App() {
               onChange={(e) => setModel(e.target.value)}
               className="text-xs bg-gray-50 border border-gray-200 text-gray-700 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-2"
             >
-              <option value="google/gemini-2.0-flash:free">Gemini 2.0 Flash (Free)</option>
-              <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
-              <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B</option>
+              <option value="sao10k/l3.3-euryale-70b">Euryale Llama 3.3 70B (Uncensored)</option>
+              <option value="anthracite-org/magnum-v4-72b">Magnum v4 72B (Uncensored)</option>
+              <option value="nousresearch/hermes-3-llama-3.1-405b">Hermes 3 405B (Uncensored)</option>
+              <option value="cognitivecomputations/dolphin-mistral-24b-venice-edition:free">Dolphin Venice (Free, Uncensored)</option>
+              <option value="google/gemini-2.0-flash:free">Gemini 2.0 Flash (Free, Censor)</option>
             </select>
             
             <button 
