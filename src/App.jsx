@@ -26,6 +26,8 @@ function App() {
 
   const [selectedScenario, setSelectedScenario] = useState(null);
   const [storySlots, setStorySlots] = useState({});
+  const [isCreatingCustomScenario, setIsCreatingCustomScenario] = useState(false);
+  const [customScenarioData, setCustomScenarioData] = useState({ title: '', world_context: '', required_characters_count: 2 });
 
   const [tempApiKey, setTempApiKey] = useState('');
   const [balance, setBalance] = useState(null);
@@ -581,22 +583,95 @@ function App() {
             
             <div className="flex-1 overflow-y-auto pr-1">
               {!selectedScenario ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-500 mb-3">Выберите готовый сюжет:</p>
-                  {scenarios.map(s => (
-                    <div 
-                      key={s.id} 
-                      onClick={() => setSelectedScenario(s)}
-                      className="border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/50 transition"
+                isCreatingCustomScenario ? (
+                  <div className="space-y-4">
+                    <button 
+                      onClick={() => setIsCreatingCustomScenario(false)}
+                      className="text-sm text-indigo-600 hover:underline mb-2"
                     >
-                      <h4 className="font-bold text-gray-800 mb-1">{s.title}</h4>
-                      <p className="text-xs text-gray-500 mb-2">{s.description}</p>
-                      <div className="flex items-center text-xs text-indigo-600 font-medium">
-                        <Users className="w-3.5 h-3.5 mr-1" /> Требуется персонажей: {s.required_characters_count}
-                      </div>
+                      ← Назад к выбору сюжета
+                    </button>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Название сюжета</label>
+                      <input 
+                        type="text" 
+                        value={customScenarioData.title}
+                        onChange={e => setCustomScenarioData(prev => ({...prev, title: e.target.value}))}
+                        className="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        placeholder="Например: Ограбление банка"
+                      />
                     </div>
-                  ))}
-                </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Сеттинг / Контекст</label>
+                      <textarea 
+                        value={customScenarioData.world_context}
+                        onChange={e => setCustomScenarioData(prev => ({...prev, world_context: e.target.value}))}
+                        className="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none h-28"
+                        placeholder="Детальное описание мира, текущей ситуации и правил поведения персонажей..."
+                      />
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Количество участников (персонажей)</label>
+                      <select
+                        value={customScenarioData.required_characters_count}
+                        onChange={e => setCustomScenarioData(prev => ({...prev, required_characters_count: parseInt(e.target.value)}))}
+                        className="w-full border border-gray-300 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7].map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button 
+                        onClick={() => {
+                          setSelectedScenario({
+                            id: 'custom_' + Date.now(),
+                            title: customScenarioData.title,
+                            description: 'Свой сюжет',
+                            world_context: customScenarioData.world_context,
+                            required_characters_count: customScenarioData.required_characters_count
+                          });
+                          setIsCreatingCustomScenario(false);
+                        }} 
+                        disabled={!customScenarioData.title || !customScenarioData.world_context} 
+                        className="px-5 py-2.5 text-white bg-indigo-600 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition w-full"
+                      >
+                        Далее (Выбор персонажей)
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div 
+                      onClick={() => setIsCreatingCustomScenario(true)}
+                      className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-4 cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition flex items-center justify-between"
+                    >
+                      <div>
+                        <h4 className="font-bold text-indigo-800 mb-1">📝 Создать свой сюжет</h4>
+                        <p className="text-xs text-indigo-600/80">Напишите собственную историю и выберите количество персонажей</p>
+                      </div>
+                      <Plus className="text-indigo-500 w-5 h-5" />
+                    </div>
+
+                    <p className="text-sm text-gray-500 mt-4 mb-2">Или выберите готовый сюжет:</p>
+                    {scenarios.map(s => (
+                      <div 
+                        key={s.id} 
+                        onClick={() => setSelectedScenario(s)}
+                        className="border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/50 transition"
+                      >
+                        <h4 className="font-bold text-gray-800 mb-1">{s.title}</h4>
+                        <p className="text-xs text-gray-500 mb-2">{s.description}</p>
+                        <div className="flex items-center text-xs text-indigo-600 font-medium">
+                          <Users className="w-3.5 h-3.5 mr-1" /> Требуется персонажей: {s.required_characters_count}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
               ) : (
                 <div className="space-y-4">
                   <button 
