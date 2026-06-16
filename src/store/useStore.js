@@ -10,12 +10,51 @@ export const useStore = create(
       chats: [],
       activeChatId: null,
       apiKey: '',
+      autoTranslate: true,
 
+      setAutoTranslate: (val) => set({ autoTranslate: val }),
       setApiKey: (key) => set({ apiKey: key }),
       setActiveChatId: (id) => set({ activeChatId: id }),
 
       addCharacter: (character) => {
-        const newChar = { ...character, id: generateId() };
+        const newChar = { 
+          ...character, 
+          id: generateId(),
+          description: character.description || '',
+          personality: character.personality || '',
+          scenario: character.scenario || '',
+          first_mes: character.first_mes || '',
+          mes_example: character.mes_example || '',
+          creator_notes: character.creator_notes || '',
+          system_prompt: character.system_prompt || '',
+          post_history_instructions: character.post_history_instructions || '',
+        };
+        set((state) => ({ characters: [...state.characters, newChar] }));
+        return newChar;
+      },
+
+      updateCharacter: (id, updates) => {
+        set((state) => ({
+          characters: state.characters.map((c) =>
+            c.id === id ? { ...c, ...updates } : c
+          ),
+        }));
+      },
+
+      importCharacter: (charData) => {
+        const newChar = { 
+          id: generateId(),
+          name: charData.name || 'New Character',
+          avatarBase64: charData.avatarBase64 || null,
+          description: charData.description || '',
+          personality: charData.personality || '',
+          scenario: charData.scenario || '',
+          first_mes: charData.first_mes || '',
+          mes_example: charData.mes_example || '',
+          creator_notes: charData.creator_notes || '',
+          system_prompt: charData.system_prompt || '',
+          post_history_instructions: charData.post_history_instructions || '',
+        };
         set((state) => ({ characters: [...state.characters, newChar] }));
         return newChar;
       },

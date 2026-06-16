@@ -3,9 +3,10 @@ import ReactMarkdown from 'react-markdown';
 import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
+import { parseTavernCard } from './utils/pngParser';
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, setActiveChatId, addCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat } = useStore();
   
   const [model, setModel] = useState('sao10k/l3.3-euryale-70b');
   
@@ -13,6 +14,10 @@ function App() {
   const [activeTab, setActiveTab] = useState('contacts'); // 'contacts' | 'stories'
   
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showChubModal, setShowChubModal] = useState(false);
+  const [chubQuery, setChubQuery] = useState('');
+  const [chubResults, setChubResults] = useState([]);
+  const [isChubLoading, setIsChubLoading] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   
@@ -23,6 +28,12 @@ function App() {
   const [newContactName, setNewContactName] = useState('');
   const [newContactPrompt, setNewContactPrompt] = useState('');
   const [newContactAvatar, setNewContactAvatar] = useState(null);
+  const [newContactDescription, setNewContactDescription] = useState('');
+  const [newContactPersonality, setNewContactPersonality] = useState('');
+  const [newContactScenario, setNewContactScenario] = useState('');
+  const [newContactFirstMes, setNewContactFirstMes] = useState('');
+  const [newContactMesExample, setNewContactMesExample] = useState('');
+  const [contactModalTab, setContactModalTab] = useState('main');
 
   const [selectedScenario, setSelectedScenario] = useState(null);
   const [storySlots, setStorySlots] = useState({});
@@ -68,25 +79,91 @@ function App() {
   };
 
   const createContact = () => {
-    if (!newContactName.trim() || !newContactPrompt.trim()) return;
+    if (!newContactName) return;
+    
     const newChar = addCharacter({
       name: newContactName,
-      systemPrompt: newContactPrompt,
+      system_prompt: newContactPrompt,
       avatarBase64: newContactAvatar,
+      description: newContactDescription,
+      personality: newContactPersonality,
+      scenario: newContactScenario,
+      first_mes: newContactFirstMes,
+      mes_example: newContactMesExample,
     });
     
-    addChat({
+    const newChat = addChat({
       type: 'single',
       name: newContactName,
       avatarBase64: newContactAvatar,
       characterIds: [newChar.id]
     });
+
+    if (newChar.first_mes) {
+      addMessageToChat(newChat.id, { role: 'assistant', content: newChar.first_mes, name: newChar.name });
+    }
     
     setNewContactName('');
     setNewContactPrompt('');
+    setNewContactDescription('');
+    setNewContactPersonality('');
+    setNewContactScenario('');
+    setNewContactFirstMes('');
+    setNewContactMesExample('');
     setNewContactAvatar(null);
+    setContactModalTab('main');
     setShowContactModal(false);
-    setIsSidebarOpen(false);
+  };
+
+  const searchChub = async (e) => {
+    e.preventDefault();
+    if (!chubQuery) return;
+    setIsChubLoading(true);
+    try {
+      const res = await fetch(`https://api.chub.ai/search?search=${encodeURIComponent(chubQuery)}&first=30`);
+      const data = await res.json();
+      setChubResults(data.nodes || []);
+    } catch (err) {
+      alert('Ошибка поиска: ' + err.message);
+    }
+    setIsChubLoading(false);
+  };
+
+  const importFromChub = async (fullPath) => {
+    try {
+      const res = await fetch(`https://api.chub.ai/api/characters/${fullPath}`);
+      const data = await res.json();
+      const char = data.node || data;
+      
+      const avatarUrl = char.avatar_url ? `https://avatars.charhub.io/avatars/${char.avatar_url}` : null;
+      
+      const newChar = addCharacter({
+        name: char.name,
+        avatarBase64: avatarUrl,
+        description: char.description || '',
+        personality: char.personality || '',
+        scenario: char.scenario || '',
+        first_mes: char.first_mes || '',
+        mes_example: char.mes_example || '',
+        system_prompt: char.system_prompt || '',
+      });
+
+      const newChat = addChat({
+        type: 'single',
+        name: char.name,
+        avatarBase64: avatarUrl,
+        characterIds: [newChar.id]
+      });
+
+      if (char.first_mes) {
+        addMessageToChat(newChat.id, { role: 'assistant', content: char.first_mes, name: char.name });
+      }
+
+      setShowChubModal(false);
+      alert('Персонаж успешно добавлен!');
+    } catch (err) {
+      alert('Ошибка скачивания: ' + err.message);
+    }
   };
 
   const startAIGenerator = () => {
@@ -115,6 +192,21 @@ function App() {
       });
     } else {
       setActiveChatId(plotGenChat.id);
+    }
+    setIsSidebarOpen(false);
+  };
+
+  const startAssistantChat = () => {
+    let assistantChat = Object.values(chats).find(c => c.type === 'assistant');
+    if (!assistantChat) {
+      assistantChat = addChat({
+        type: 'assistant',
+        name: 'AI Ассистент',
+        avatarBase64: null,
+        characterIds: []
+      });
+    } else {
+      setActiveChatId(assistantChat.id);
     }
     setIsSidebarOpen(false);
   };
@@ -161,20 +253,46 @@ function App() {
     let finalSystemPrompt = SYSTEM_PROMPT_DEFAULT;
     let selectedModel = model;
 
-    if (activeChat.type === 'single') {
+    if (activeChat.type === 'assistant') {
+      finalSystemPrompt = "Ты умный, полезный и вежливый ИИ-ассистент. Твоя задача — давать точные и развернутые ответы на вопросы пользователя. Выполняй инструкции четко и без лишних слов.";
+    } else if (activeChat.type === 'single') {
       const char = characters.find(c => c.id === activeChat.characterIds[0]);
-      finalSystemPrompt = char?.systemPrompt || SYSTEM_PROMPT_DEFAULT;
+      if (char) {
+        let parts = [];
+        if (char.system_prompt) parts.push(char.system_prompt);
+        else if (char.systemPrompt) parts.push(char.systemPrompt);
+        else parts.push(SYSTEM_PROMPT_DEFAULT);
+
+        if (char.description) parts.push(`[ОПИСАНИЕ ПЕРСОНАЖА]\n${char.description}`);
+        if (char.personality) parts.push(`[ХАРАКТЕР ПЕРСОНАЖА]\n${char.personality}`);
+        if (char.scenario) parts.push(`[СЦЕНАРИЙ И КОНТЕКСТ МИРА]\n${char.scenario}`);
+        if (char.mes_example) parts.push(`[ПРИМЕРЫ ДИАЛОГОВ]\n${char.mes_example}`);
+        
+        finalSystemPrompt = parts.join('\n\n');
+        
+        if (char.post_history_instructions) {
+          finalSystemPrompt += `\n\n[ВАЖНЫЕ ИНСТРУКЦИИ ДЛЯ СЛЕДУЮЩЕГО ОТВЕТА]\n${char.post_history_instructions}`;
+        }
+      }
     } else if (activeChat.type === 'group') {
       const charsDesc = activeChat.characterIds.map((id, i) => {
         if (id === 'USER') return `${i + 1}) Пользователь: Человек, с которым вы сейчас общаетесь. ИИ КАТЕГОРИЧЕСКИ ЗАПРЕЩАЕТСЯ придумывать действия или реплики за Пользователя.`;
-        const c = characters.find(char => char.id === id);
-        return c ? `${i + 1}) ${c.name}: ${c.systemPrompt}` : null;
+        const char = characters.find(c => c.id === id);
+        if (!char) return null;
+        let charContext = `${i + 1}) ${char.name}:`;
+        if (char.description || char.personality) charContext += ` ${char.description || ''} ${char.personality || ''}`;
+        else charContext += ` ${char.systemPrompt || ''}`;
+        return charContext;
       }).filter(Boolean).join('. ');
       finalSystemPrompt = `[ГЛОБАЛЬНЫЙ СЦЕНАРИЙ]: ${activeChat.world_context || ''}. [УЧАСТНИКИ]: ${charsDesc}. СТРОГОЕ ПРАВИЛО: Каждую свою реплику начинай с имени персонажа в формате "Имя:". Отвечай только за заявленных персонажей. Никогда не пиши действия или реплики за Пользователя.`;
     } else if (activeChat.type === 'generator') {
-      finalSystemPrompt = `Ты — эксперт по созданию глубоких, живых и нешаблонных персонажей для ролевых игр. Пользователь опишет тебе свою идею (например, "нужна строгая начальница" или "веселый бармен"). Твоя задача — придумать персонажу реалистичное имя, глубокий характер, скрытые мотивы, страхи и манеру общения.\n\nКогда анкета персонажа согласована с пользователем, ты ОБЯЗАН выдать результат в формате JSON внутри тегов <character type="application/json">. Структура: { "name": "Имя персонажа", "avatar_emoji": "🎭", "system_prompt": "Детальный промпт для этого персонажа. Опиши его роль, характер, стиль речи и правила поведения от первого лица или в директивном тоне. Этот текст будет управлять поведением ИИ в будущем чате." }`;
+      finalSystemPrompt = `Ты — эксперт по созданию глубоких, живых и нешаблонных персонажей для ролевых игр. Пользователь опишет тебе свою идею. Твоя задача — придумать реалистичное имя, характер, скрытые мотивы.\n\nКогда анкета согласована, ты ОБЯЗАН выдать результат в формате JSON внутри тегов <character type="application/json">. Структура: { "name": "Имя", "avatar_emoji": "🎭", "system_prompt": "Промпт (роль и поведение)", "description": "Внешность", "personality": "Характер", "scenario": "Сценарий/Мир", "first_mes": "Первое сообщение", "mes_example": "Пример диалогов" }`;
     } else if (activeChat.type === 'plot_generator') {
       finalSystemPrompt = `Ты — эксперт по созданию увлекательных сценариев (сюжетов) для текстовых ролевых игр. Пользователь опишет свою задумку, а ты должен помочь развить ее в полноценный сеттинг.\n\nЗадавай уточняющие вопросы, предлагай интересные конфликты и завязки. Когда сюжет согласован, помоги пользователю красиво сформулировать "Название сюжета" и "Контекст/Сеттинг" для создания сценария в приложении. Форматируй свой ответ красиво, используя markdown.`;
+    }
+
+    if (autoTranslate) {
+      finalSystemPrompt += "\n\n[ВАЖНО: АБСОЛЮТНО ВСЕ СВОИ ОТВЕТЫ, ДЕЙСТВИЯ, МЫСЛИ И РЕПЛИКИ ТЫ ОБЯЗАН ПЕРЕВОДИТЬ И ПИСАТЬ ИСКЛЮЧИТЕЛЬНО НА РУССКОМ ЯЗЫКЕ. ДАЖЕ ЕСЛИ ПЕРСОНАЖ АНГЛОЯЗЫЧНЫЙ, ТЫ ПЕРЕВОДИШЬ ЕГО РЕПЛИКИ НА РУССКИЙ КАЧЕСТВЕННЫМ ХУДОЖЕСТВЕННЫМ СТИЛЕМ. DO NOT USE ENGLISH, RUSSIAN ONLY.]";
     }
 
     const updatedMessages = [...activeChat.messages, userMessage];
@@ -343,10 +461,22 @@ function App() {
                 <Plus className="w-4 h-4 mr-1.5" /> Создать вручную
               </button>
               <button 
+                onClick={() => setShowChubModal(true)}
+                className="flex items-center justify-center w-full py-2.5 bg-white/40 backdrop-blur-xl border border-white/50 border border-indigo-200 text-violet-500 rounded-xl text-sm font-medium hover:bg-white/50 transition-colors shadow-sm mt-2"
+              >
+                <Users className="w-4 h-4 mr-1.5" /> Найти в базе (Chub.ai)
+              </button>
+              <button 
                 onClick={startAIGenerator}
                 className="flex items-center justify-center w-full py-2.5 bg-violet-400 text-white rounded-xl text-sm font-medium hover:bg-violet-400 hover:bg-violet-500 transition-colors shadow-sm"
               >
                 <Sparkles className="w-4 h-4 mr-1.5" /> Создать с ИИ
+              </button>
+              <button 
+                onClick={startAssistantChat}
+                className="flex items-center justify-center w-full py-2.5 bg-white/50 text-violet-500 border border-indigo-200 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm mt-2"
+              >
+                <Bot className="w-4 h-4 mr-1.5" /> Обычный чат (Ассистент)
               </button>
             </>
           ) : (
@@ -577,46 +707,190 @@ function App() {
       {/* Modal: New Contact */}
       {showContactModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-sm w-full p-6 shadow-xl">
-            <h3 className="text-xl font-bold mb-4 text-slate-800">Новый контакт</h3>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-800/90 mb-2">Аватар (Опционально)</label>
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-transparent border border-white/50 overflow-hidden flex items-center justify-center shrink-0">
-                  {newContactAvatar ? <img src={newContactAvatar} className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-800/50 w-6 h-6" />}
-                </div>
-                <label className="cursor-pointer bg-white/40 backdrop-blur-xl border border-white/50 border border-white/60 text-slate-800/90 py-2 px-4 rounded-xl text-sm font-medium hover:bg-white/60 transition w-full text-center">
-                  Загрузить фото
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setNewContactAvatar)} />
+          <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-slate-800">Новый персонаж</h3>
+              <div className="flex gap-2">
+                <label className="cursor-pointer text-xs bg-indigo-100 text-indigo-700 py-1.5 px-3 rounded-lg hover:bg-indigo-200 transition font-medium">
+                  Импорт (PNG/JSON)
+                  <input type="file" accept=".png,.json" className="hidden" onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    try {
+                      let data;
+                      if (file.name.endsWith('.png')) {
+                        data = await parseTavernCard(file);
+                      } else {
+                        const text = await file.text();
+                        data = JSON.parse(text);
+                      }
+                      const charData = data.data || data; // handle both v2 and standard formats
+                      setNewContactName(charData.name || '');
+                      setNewContactPrompt(charData.system_prompt || charData.systemPrompt || '');
+                      setNewContactDescription(charData.description || '');
+                      setNewContactPersonality(charData.personality || '');
+                      setNewContactScenario(charData.scenario || '');
+                      setNewContactFirstMes(charData.first_mes || '');
+                      setNewContactMesExample(charData.mes_example || '');
+                      alert('Успешно загружено!');
+                    } catch (err) {
+                      alert('Ошибка при импорте: ' + err.message);
+                    }
+                  }} />
                 </label>
               </div>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-800/90 mb-1">Имя</label>
-              <input 
-                type="text" 
-                value={newContactName}
-                onChange={e => setNewContactName(e.target.value)}
-                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
-                placeholder="Имя персонажа"
-              />
+            <div className="flex border-b border-white/40 mb-4 shrink-0">
+              {['main', 'details', 'examples'].map(tab => (
+                <button 
+                  key={tab}
+                  className={`flex-1 py-2 text-sm font-medium ${contactModalTab === tab ? 'text-violet-500 border-b-2 border-indigo-600' : 'text-slate-800/70 hover:text-slate-800/90'}`}
+                  onClick={() => setContactModalTab(tab)}
+                >
+                  {tab === 'main' ? 'Главное' : tab === 'details' ? 'Детали' : 'Диалоги'}
+                </button>
+              ))}
             </div>
             
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-800/90 mb-1">Системный промпт / Характер</label>
-              <textarea 
-                value={newContactPrompt}
-                onChange={e => setNewContactPrompt(e.target.value)}
-                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-none h-28"
-                placeholder="Ты заботливый друг..."
-              />
+            <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+              {contactModalTab === 'main' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800/90 mb-2">Аватар</label>
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-16 rounded-full bg-transparent border border-white/50 overflow-hidden flex items-center justify-center shrink-0">
+                        {newContactAvatar ? <img src={newContactAvatar} className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-800/50 w-6 h-6" />}
+                      </div>
+                      <label className="cursor-pointer bg-white/40 backdrop-blur-xl border border-white/50 text-slate-800/90 py-2 px-4 rounded-xl text-sm font-medium hover:bg-white/60 transition w-full text-center">
+                        Загрузить фото
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setNewContactAvatar)} />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Имя</label>
+                    <input 
+                      type="text" 
+                      value={newContactName}
+                      onChange={e => setNewContactName(e.target.value)}
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Системный промпт (Инструкции)</label>
+                    <textarea 
+                      value={newContactPrompt}
+                      onChange={e => setNewContactPrompt(e.target.value)}
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-24"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Первое сообщение</label>
+                    <textarea 
+                      value={newContactFirstMes}
+                      onChange={e => setNewContactFirstMes(e.target.value)}
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-24"
+                    />
+                  </div>
+                </>
+              )}
+
+              {contactModalTab === 'details' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Описание (Внешность, Бэкграунд)</label>
+                    <textarea 
+                      value={newContactDescription}
+                      onChange={e => setNewContactDescription(e.target.value)}
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-32"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Характер</label>
+                    <textarea 
+                      value={newContactPersonality}
+                      onChange={e => setNewContactPersonality(e.target.value)}
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-24"
+                    />
+                  </div>
+                </>
+              )}
+
+              {contactModalTab === 'examples' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Сценарий / Мир</label>
+                    <textarea 
+                      value={newContactScenario}
+                      onChange={e => setNewContactScenario(e.target.value)}
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-24"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Примеры диалогов (mes_example)</label>
+                    <textarea 
+                      value={newContactMesExample}
+                      onChange={e => setNewContactMesExample(e.target.value)}
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-48"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-white/40 shrink-0">
               <button onClick={() => setShowContactModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Отмена</button>
-              <button onClick={createContact} disabled={!newContactName || !newContactPrompt} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition">Создать</button>
+              <button onClick={createContact} disabled={!newContactName} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition">Создать</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Modal: Chub Search */}
+      {showChubModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-2xl w-full p-6 shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-slate-800">Поиск в базе Chub.ai</h3>
+              <button onClick={() => setShowChubModal(false)} className="text-slate-800/50 hover:text-slate-800"><X className="w-5 h-5"/></button>
+            </div>
+            
+            <form onSubmit={searchChub} className="flex gap-2 mb-4">
+              <input 
+                type="text" 
+                value={chubQuery}
+                onChange={e => setChubQuery(e.target.value)}
+                placeholder="Поиск персонажей (на английском)..."
+                className="flex-1 border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 bg-white/50"
+              />
+              <button type="submit" disabled={isChubLoading} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition">
+                {isChubLoading ? 'Поиск...' : 'Найти'}
+              </button>
+            </form>
+
+            <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {chubResults.map(char => (
+                <div key={char.id} className="bg-white/40 backdrop-blur-xl border border-white/50 p-3 rounded-xl flex items-start gap-3 hover:bg-white/50 transition">
+                  <div className="w-16 h-16 rounded-lg bg-indigo-50 shrink-0 overflow-hidden">
+                    {char.avatar_url && <img src={`https://avatars.charhub.io/avatars/${char.avatar_url}`} className="w-full h-full object-cover" />}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <h4 className="font-bold text-slate-800 text-sm truncate">{char.name}</h4>
+                    <p className="text-xs text-slate-800/70 line-clamp-2 mt-1">{char.tagline || char.description}</p>
+                    <button onClick={() => importFromChub(char.fullPath)} className="mt-2 text-xs font-medium bg-violet-400 text-white px-3 py-1.5 rounded-lg hover:bg-violet-500 transition w-full">
+                      Добавить в чат
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {chubResults.length === 0 && !isChubLoading && chubQuery && (
+                <div className="col-span-full text-center text-slate-800/50 py-10">Ничего не найдено</div>
+              )}
             </div>
           </div>
         </div>
