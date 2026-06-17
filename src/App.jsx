@@ -722,7 +722,7 @@ function App() {
                               e.stopPropagation(); 
                               openEditContact(char); 
                             }} 
-                            className="p-2 text-slate-800/40 hover:text-violet-500 hover:bg-white/40 rounded-lg transition-colors mr-1 shrink-0 opacity-0 group-hover:opacity-100"
+                            className="p-2 text-slate-800/40 hover:text-violet-500 hover:bg-white/40 rounded-lg transition-colors mr-1 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100"
                           >
                             <Settings className="w-4 h-4" />
                           </button>
@@ -877,7 +877,15 @@ function App() {
           
           {activeChat ? (
             <>
-              <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0 border border-indigo-50">
+              <div 
+                className={`w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0 border border-indigo-50 ${activeChat.type === 'single' ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                onClick={() => {
+                  if (activeChat.type === 'single' && activeChat.characterIds?.length > 0) {
+                    const char = characters.find(c => c.id === activeChat.characterIds[0]);
+                    if (char) openEditContact(char);
+                  }
+                }}
+              >
                 {activeChat.type === 'generator' ? <Bot className="text-violet-500 w-6 h-6" /> : 
                  activeChat.type === 'plot_generator' ? <Sparkles className="text-violet-500 w-6 h-6" /> : 
                  activeChat.type === 'group' ? <Users className="text-violet-500 w-6 h-6" /> : 
@@ -885,19 +893,25 @@ function App() {
               </div>
               <div className="flex-1 overflow-hidden mr-2">
                 <h1 className="font-semibold text-slate-800 text-lg leading-tight truncate">{activeChat.name}</h1>
-                <p className="text-xs text-slate-800/70">{activeChat.type === 'group' ? `${activeChat.characterIds.length} персонажей` : (activeChat.type === 'generator' ? 'Генерация персонажа' : (activeChat.type === 'plot_generator' ? 'Генерация сюжета' : 'Online'))}</p>
+                <p className="text-xs text-slate-800/70 truncate flex items-center gap-2">
+                  <span>{activeChat.type === 'group' ? `${activeChat.characterIds.length} персонажей` : (activeChat.type === 'generator' ? 'Генерация персонажа' : (activeChat.type === 'plot_generator' ? 'Генерация сюжета' : 'Online'))}</span>
+                  {balance !== null && <span className="text-green-600 font-medium md:hidden">${typeof balance === 'number' ? balance.toFixed(4) : balance}</span>}
+                </p>
               </div>
             </>
           ) : (
-            <div className="flex-1 text-slate-800/70 font-medium">Выберите чат</div>
+            <div className="flex-1 text-slate-800/70 font-medium flex items-center gap-2">
+              <span>Выберите чат</span>
+              {balance !== null && <span className="text-green-600 font-medium md:hidden text-sm">${typeof balance === 'number' ? balance.toFixed(4) : balance}</span>}
+            </div>
           )}
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-1 md:gap-2">
             {activeChat && activeChat.type === 'single' && (
               <button
                 onClick={handleSummarizeChat}
                 disabled={isSummarizing || activeChat.messages.length === 0}
-                className="mr-2 p-2 bg-white/60 text-violet-500 rounded-lg hover:bg-white/80 transition-colors disabled:opacity-50"
+                className="p-1.5 md:p-2 bg-white/60 text-violet-500 rounded-lg hover:bg-white/80 transition-colors disabled:opacity-50"
                 title="Завершить главу и начать новую (Саммари)"
               >
                 {isSummarizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitBranch className="w-4 h-4" />}
@@ -906,7 +920,7 @@ function App() {
             <select 
               value={selectedModel} 
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="text-xs bg-white/60 border border-white/50 text-slate-800/90 rounded-lg p-2 outline-none focus:ring-2 focus:ring-violet-400 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-1"
+              className="text-xs bg-white/60 border border-white/50 text-slate-800/90 rounded-lg p-1.5 md:p-2 outline-none focus:ring-2 focus:ring-violet-400 max-w-[80px] min-[400px]:max-w-[100px] sm:max-w-none disabled:opacity-50 truncate"
             >
               {[...AVAILABLE_MODELS].sort((a, b) => {
                 const aFav = favoriteModels?.includes(a.id);
@@ -922,10 +936,10 @@ function App() {
             </select>
             <button
               onClick={() => toggleFavoriteModel(selectedModel)}
-              className={`p-2 rounded-lg transition-colors mr-2 ${favoriteModels?.includes(selectedModel) ? 'text-amber-400 hover:text-amber-500' : 'text-slate-800/30 hover:text-amber-400'}`}
+              className={`p-1.5 md:p-2 rounded-lg transition-colors ${favoriteModels?.includes(selectedModel) ? 'text-amber-400 hover:text-amber-500' : 'text-slate-800/30 hover:text-amber-400'}`}
               title={favoriteModels?.includes(selectedModel) ? "Убрать из избранного" : "Добавить в избранное"}
             >
-              <Star className="w-5 h-5" fill={favoriteModels?.includes(selectedModel) ? "currentColor" : "none"} />
+              <Star className="w-4 h-4 md:w-5 md:h-5" fill={favoriteModels?.includes(selectedModel) ? "currentColor" : "none"} />
             </button>
             
             {activeChat && (
@@ -936,10 +950,10 @@ function App() {
                       clearChatMessages(activeChat.id);
                     }
                   }}
-                  className="p-2 text-slate-800/50 hover:text-violet-500 hover:bg-white/50 rounded-lg transition-colors mr-1"
+                  className="p-1.5 md:p-2 text-slate-800/50 hover:text-violet-500 hover:bg-white/50 rounded-lg transition-colors"
                   title="Очистить историю сообщений"
                 >
-                  <Eraser className="w-5 h-5" />
+                  <Eraser className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
 
                 <button 
@@ -952,10 +966,10 @@ function App() {
                       deleteChat(activeChat.id);
                     }
                   }}
-                  className="p-2 text-slate-800/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-1.5 md:p-2 text-slate-800/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   title={activeChat.type === 'single' ? "Удалить чат и персонажа" : "Удалить чат"}
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               </>
             )}
