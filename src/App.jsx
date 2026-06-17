@@ -596,13 +596,17 @@ function App() {
           'X-Title': 'Private AI Companion'
         },
         body: JSON.stringify({ 
-          models: [model, "meta-llama/llama-3.3-70b-instruct"], 
+          model: model || "meta-llama/llama-3.3-70b-instruct",
           messages: [{ role: 'user', content: summaryPrompt }],
           temperature: 0.7,
         })
       });
 
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'API Error: ' + response.status);
+      }
+      
       if (data.choices && data.choices[0] && data.choices[0].message) {
         const summaryText = data.choices[0].message.content;
         
@@ -620,7 +624,7 @@ function App() {
       }
     } catch (error) {
       console.error('Summarization failed:', error);
-      alert('Ошибка при создании пересказа.');
+      alert(`Ошибка при создании пересказа: ${error.message}`);
     } finally {
       setIsSummarizing(false);
     }
