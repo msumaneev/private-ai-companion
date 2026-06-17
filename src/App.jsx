@@ -17,13 +17,15 @@ const AVAILABLE_MODELS = [
 ];
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary } = useStore();
   
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('contacts'); // 'contacts' | 'stories'
   const [expandedCharacters, setExpandedCharacters] = useState({});
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [summaryModalChatId, setSummaryModalChatId] = useState(null);
+  const [summaryModalText, setSummaryModalText] = useState("");
   
   const [showContactModal, setShowContactModal] = useState(false);
   const [showChubModal, setShowChubModal] = useState(false);
@@ -740,15 +742,29 @@ function App() {
                                 <GitBranch className={`w-3 h-3 inline-block mr-1 ${activeChatId === chat.id ? 'text-white' : 'opacity-50'}`} />
                                 Глава {idx + 1}
                               </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (window.confirm('Удалить эту главу?')) deleteChat(chat.id);
-                                }}
-                                className={`p-1 rounded opacity-0 group-hover/chat:opacity-100 hover:bg-red-500/20 hover:text-red-500 transition-colors ${activeChatId === chat.id ? 'text-white/80' : 'text-slate-400'}`}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <div className="flex">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSummaryModalChatId(chat.id);
+                                    setSummaryModalText(chat.summary || "");
+                                  }}
+                                  className={`p-1 rounded opacity-0 group-hover/chat:opacity-100 transition-colors mr-1 ${chat.summary ? (activeChatId === chat.id ? 'text-white hover:bg-white/20' : 'text-amber-500 hover:bg-amber-500/20') : (activeChatId === chat.id ? 'text-white/80 hover:bg-white/20' : 'text-slate-400 hover:bg-slate-200')}`}
+                                  title="Память (Саммари) этой главы"
+                                >
+                                  <BookOpen className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('Удалить эту главу?')) deleteChat(chat.id);
+                                  }}
+                                  className={`p-1 rounded opacity-0 group-hover/chat:opacity-100 hover:bg-red-500/20 hover:text-red-500 transition-colors ${activeChatId === chat.id ? 'text-white/80' : 'text-slate-400'}`}
+                                  title="Удалить главу"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                           <button
@@ -1536,6 +1552,53 @@ function App() {
                 onClick={() => { setApiKey(tempApiKey); setShowSettingsModal(false); }} 
                 className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 transition"
               >
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal: Summary Memory */}
+      {summaryModalChatId && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-lg w-full p-6 shadow-xl flex flex-col max-h-[80vh]">
+            <h3 className="text-xl font-bold mb-2 text-slate-800 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-amber-500" />
+              Память (Саммари) главы
+            </h3>
+            <p className="text-xs text-slate-800/70 mb-4">
+              Здесь находится пересказ предыдущих событий. Модель использует этот текст как дополнительный контекст, чтобы "помнить" прошлое. Вы можете отредактировать его.
+            </p>
+            
+            <div className="flex-1 overflow-y-auto mb-4">
+              <TextareaAutosize
+                minRows={5}
+                className="w-full resize-none bg-white/50 border border-white/60 rounded-xl p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400"
+                value={summaryModalText}
+                onChange={e => setSummaryModalText(e.target.value)}
+                placeholder="Саммари пусто. Вы можете нажать 'Саммари' в прошлой главе, чтобы сгенерировать его автоматически, или написать здесь текст вручную."
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end mt-auto pt-2 border-t border-white/40">
+              <button 
+                onClick={() => {
+                  setSummaryModalChatId(null);
+                  setSummaryModalText("");
+                }} 
+                className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition"
+              >
+                Отмена
+              </button>
+              <button 
+                onClick={() => {
+                  updateChatSummary(summaryModalChatId, summaryModalText);
+                  setSummaryModalChatId(null);
+                  setSummaryModalText("");
+                }} 
+                className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 transition flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
                 Сохранить
               </button>
             </div>
