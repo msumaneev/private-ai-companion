@@ -836,7 +836,7 @@ function App() {
                         >
                           <div className={`prose prose-sm max-w-none break-words ${isUser ? 'text-indigo-50 prose-headings:text-slate-800 prose-a:text-violet-400 prose-strong:text-slate-800' : 'text-slate-800'}`}>
                             {editingMessageIndex === idx ? (
-                              <div className="flex flex-col gap-2 min-w-[200px]">
+                              <div className="flex flex-col gap-2 w-[80vw] sm:w-[500px] max-w-full">
                                 <TextareaAutosize 
                                   minRows={1}
                                   value={editingMessageContent}
