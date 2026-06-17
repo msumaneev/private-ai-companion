@@ -75,11 +75,20 @@ function App() {
   const fetchBalance = async () => {
     if (!apiKey) return;
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/auth/key', {
+      const response = await fetch('https://openrouter.ai/api/v1/credits', {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       });
       const data = await response.json();
-      setBalance(data.data?.limit ? (data.data.limit - data.data.usage) : null);
+      if (data.data && typeof data.data.total_credits === 'number') {
+        setBalance(data.data.total_credits - data.data.total_usage);
+      } else {
+        // Fallback for older keys or if /credits is not available
+        const keyResponse = await fetch('https://openrouter.ai/api/v1/auth/key', {
+          headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+        const keyData = await keyResponse.json();
+        setBalance(keyData.data?.limit ? (keyData.data.limit - keyData.data.usage) : null);
+      }
     } catch (e) {
       console.error('Failed to fetch balance', e);
     }
