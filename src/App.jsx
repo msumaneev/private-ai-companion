@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { compressImage } from './utils/imageCompressor';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star, ArrowDown } from 'lucide-react';
+import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star, ArrowDown, Pencil, Check } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 import { parseTavernCard } from './utils/pngParser';
@@ -17,7 +17,7 @@ const AVAILABLE_MODELS = [
 ];
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, favoriteModels, toggleFavoriteModel, deleteMessageFromChat } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, favoriteModels, toggleFavoriteModel, deleteMessageFromChat, editMessageInChat } = useStore();
   
   const [model, setModel] = useState('sao10k/l3.3-euryale-70b');
   
@@ -34,6 +34,8 @@ function App() {
   
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [editingMessageIndex, setEditingMessageIndex] = useState(null);
+  const [editingMessageContent, setEditingMessageContent] = useState('');
   const messagesEndRef = useRef(null);
 
   const [newContactName, setNewContactName] = useState('');
@@ -833,7 +835,35 @@ function App() {
                           }`}
                         >
                           <div className={`prose prose-sm max-w-none break-words ${isUser ? 'text-indigo-50 prose-headings:text-slate-800 prose-a:text-violet-400 prose-strong:text-slate-800' : 'text-slate-800'}`}>
-                            <ReactMarkdown>{parsed.text}</ReactMarkdown>
+                            {editingMessageIndex === idx ? (
+                              <div className="flex flex-col gap-2 min-w-[200px]">
+                                <TextareaAutosize 
+                                  minRows={1}
+                                  value={editingMessageContent}
+                                  onChange={(e) => setEditingMessageContent(e.target.value)}
+                                  className={`w-full ${isUser ? 'bg-white/20 border-white/30 text-slate-800' : 'bg-white/50 border-white/60 text-slate-800'} border rounded-xl p-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none`}
+                                />
+                                <div className="flex justify-end gap-2 mt-1">
+                                  <button 
+                                    onClick={() => setEditingMessageIndex(null)}
+                                    className={`px-3 py-1 rounded-lg text-xs font-medium ${isUser ? 'bg-white/20 hover:bg-white/30 text-slate-800' : 'bg-white/50 hover:bg-white/70 text-slate-800'}`}
+                                  >
+                                    Отмена
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      editMessageInChat(activeChat.id, idx, editingMessageContent);
+                                      setEditingMessageIndex(null);
+                                    }}
+                                    className="px-3 py-1 rounded-lg text-xs font-medium bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-1"
+                                  >
+                                    <Check className="w-3 h-3" /> Сохранить
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <ReactMarkdown>{parsed.text}</ReactMarkdown>
+                            )}
                           </div>
                           
                           {extractedJSON && (
@@ -852,13 +882,25 @@ function App() {
                           )}
                         </div>
                         
-                        <button 
-                          onClick={() => deleteMessageFromChat(activeChat.id, idx)} 
-                          className="opacity-100 sm:opacity-0 group-hover:opacity-100 p-2 text-slate-800/30 hover:text-red-500 transition-all shrink-0"
-                          title="Удалить сообщение"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex flex-col gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                          <button 
+                            onClick={() => {
+                              setEditingMessageIndex(idx);
+                              setEditingMessageContent(msg.content);
+                            }} 
+                            className="p-1.5 text-slate-800/40 hover:text-indigo-500 transition-all"
+                            title="Редактировать сообщение"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => deleteMessageFromChat(activeChat.id, idx)} 
+                            className="p-1.5 text-slate-800/40 hover:text-red-500 transition-all"
+                            title="Удалить сообщение"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

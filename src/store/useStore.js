@@ -100,6 +100,20 @@ export const useStore = create(
         }));
       },
 
+      editMessageInChat: (chatId, messageIndex, newContent) => {
+        set((state) => ({
+          chats: state.chats.map((chat) => {
+            if (chat.id !== chatId) return chat;
+            return {
+              ...chat,
+              messages: chat.messages.map((msg, idx) => 
+                idx === messageIndex ? { ...msg, content: newContent } : msg
+              )
+            };
+          })
+        }));
+      },
+
       deleteChat: (chatId) => {
         set((state) => {
           const chatToDelete = state.chats.find(c => c.id === chatId);
