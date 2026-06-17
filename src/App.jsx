@@ -26,7 +26,7 @@ const AVAILABLE_MODELS = [
 ];
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, userName, setUserName } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName } = useStore();
   
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -45,6 +45,7 @@ function App() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [tempApiKey, setTempApiKey] = useState('');
   const [tempUserName, setTempUserName] = useState('');
+  const [tempChatUserName, setTempChatUserName] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [editingMessageIndex, setEditingMessageIndex] = useState(null);
   const [editingMessageContent, setEditingMessageContent] = useState('');
@@ -455,7 +456,7 @@ function App() {
         if (char.scenario) parts.push(`[СЦЕНАРИЙ И КОНТЕКСТ МИРА]\n${char.scenario}`);
         if (char.mes_example) parts.push(`[ПРИМЕРЫ ДИАЛОГОВ]\n${char.mes_example}`);
         
-        finalSystemPrompt = replaceMacros(parts.join('\n\n'), char.name, userName);
+        finalSystemPrompt = replaceMacros(parts.join('\n\n'), char.name, activeChat.userName || userName);
         
         if (char.post_history_instructions) {
           finalSystemPrompt += `\n\n[ВАЖНЫЕ ИНСТРУКЦИИ ДЛЯ СЛЕДУЮЩЕГО ОТВЕТА]\n${char.post_history_instructions}`;
@@ -766,6 +767,7 @@ function App() {
                                     e.stopPropagation();
                                     setSummaryModalChatId(chat.id);
                                     setSummaryModalText(chat.summary || "");
+                                    setTempChatUserName(chat.userName || "");
                                   }}
                                   className={`p-1 rounded opacity-0 group-hover/chat:opacity-100 transition-colors mr-1 ${chat.summary ? (activeChatId === chat.id ? 'text-white hover:bg-white/20' : 'text-amber-500 hover:bg-amber-500/20') : (activeChatId === chat.id ? 'text-white/80 hover:bg-white/20' : 'text-slate-400 hover:bg-slate-200')}`}
                                   title="Память (Саммари) этой главы"
@@ -1020,7 +1022,7 @@ function App() {
             activeChat.messages.map((msg, idx) => {
               const isUser = msg.role === 'user';
               const charNameForMacro = activeChat.type === 'single' ? activeChat.name : null;
-              const processedContent = replaceMacros(msg.content, charNameForMacro, userName);
+              const processedContent = replaceMacros(msg.content, charNameForMacro, activeChat.userName || userName);
               const parsed = isUser ? { text: processedContent } : parseMessageContent(processedContent, activeChat.type);
               
               let speakerChar = null;
@@ -1604,29 +1606,51 @@ function App() {
       {summaryModalChatId && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-lg w-full p-6 shadow-xl flex flex-col max-h-[80vh]">
-            <h3 className="text-xl font-bold mb-2 text-slate-800 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-amber-500" />
-              Память (Саммари) главы
+            <h3 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+              <Settings className="w-5 h-5 text-amber-500" />
+              Настройки чата (главы)
             </h3>
-            <p className="text-xs text-slate-800/70 mb-4">
-              Здесь находится пересказ предыдущих событий. Модель использует этот текст как дополнительный контекст, чтобы "помнить" прошлое. Вы можете отредактировать его.
-            </p>
             
-            <div className="flex-1 overflow-y-auto mb-4">
-              <TextareaAutosize
-                minRows={5}
-                className="w-full resize-none bg-white/50 border border-white/60 rounded-xl p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400"
-                value={summaryModalText}
-                onChange={e => setSummaryModalText(e.target.value)}
-                placeholder="Саммари пусто. Вы можете нажать 'Саммари' в прошлой главе, чтобы сгенерировать его автоматически, или написать здесь текст вручную."
-              />
+            <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-800/90 mb-2 flex items-center gap-2">
+                  <User className="w-4 h-4 text-slate-500" /> Ваше имя в этом чате (для {'{{user}}'})
+                </label>
+                <input 
+                  type="text" 
+                  value={tempChatUserName}
+                  onChange={e => setTempChatUserName(e.target.value)}
+                  className="w-full bg-white/50 border border-white/60 rounded-xl p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400"
+                  placeholder={userName || "Имя по умолчанию"}
+                />
+                <p className="text-xs text-slate-800/70 mt-2">
+                  Если оставить пустым, будет использовано глобальное имя ({userName || "Пользователь"}).
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-800/90 mb-2 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-slate-500" /> Память (Саммари)
+                </label>
+                <p className="text-xs text-slate-800/70 mb-2">
+                  Краткий пересказ прошлых событий для нейросети.
+                </p>
+                <TextareaAutosize
+                  minRows={5}
+                  className="w-full resize-none bg-white/50 border border-white/60 rounded-xl p-3 text-sm text-slate-800 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400"
+                  value={summaryModalText}
+                  onChange={e => setSummaryModalText(e.target.value)}
+                  placeholder="Саммари пусто. Вы можете нажать 'Саммари' в прошлой главе, чтобы сгенерировать его автоматически, или написать здесь текст вручную."
+                />
+              </div>
             </div>
 
-            <div className="flex gap-2 justify-end mt-auto pt-2 border-t border-white/40">
+            <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-white/40">
               <button 
                 onClick={() => {
                   setSummaryModalChatId(null);
                   setSummaryModalText("");
+                  setTempChatUserName("");
                 }} 
                 className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition"
               >
@@ -1635,8 +1659,10 @@ function App() {
               <button 
                 onClick={() => {
                   updateChatSummary(summaryModalChatId, summaryModalText);
+                  updateChatField(summaryModalChatId, 'userName', tempChatUserName);
                   setSummaryModalChatId(null);
                   setSummaryModalText("");
+                  setTempChatUserName("");
                 }} 
                 className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 transition flex items-center gap-2"
               >

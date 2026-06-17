@@ -159,6 +159,14 @@ export const useStore = create(
         }));
       },
 
+      updateChatField: (chatId, field, value) => {
+        set((state) => ({
+          chats: state.chats.map((chat) =>
+            chat.id === chatId ? { ...chat, [field]: value } : chat
+          )
+        }));
+      },
+
       deleteChat: (chatId) => {
         set((state) => {
           const newChats = state.chats.filter(c => c.id !== chatId);
