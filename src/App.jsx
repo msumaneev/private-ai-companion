@@ -43,6 +43,7 @@ function App() {
   const [isChubLoading, setIsChubLoading] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [input, setInput] = useState('');
   const [tempApiKey, setTempApiKey] = useState('');
   const [tempUserName, setTempUserName] = useState('');
   const [tempChatUserName, setTempChatUserName] = useState('');
