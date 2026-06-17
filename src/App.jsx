@@ -7,6 +7,15 @@ import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 import { parseTavernCard } from './utils/pngParser';
 
+const replaceMacros = (text, charName) => {
+  if (!text) return text;
+  return text
+    .replace(/{{char}}/gi, charName || 'Персонаж')
+    .replace(/{{user}}/gi, 'Пользователь')
+    .replace(/<USER>/gi, 'Пользователь')
+    .replace(/<BOT>/gi, charName || 'Персонаж');
+};
+
 const AVAILABLE_MODELS = [
   { id: 'sao10k/l3.3-euryale-70b', name: 'Euryale Llama 3.3 70B (Uncensored)' },
   { id: 'anthracite-org/magnum-v4-72b', name: 'Magnum v4 72B (Uncensored)' },
@@ -446,7 +455,7 @@ function App() {
         if (char.scenario) parts.push(`[СЦЕНАРИЙ И КОНТЕКСТ МИРА]\n${char.scenario}`);
         if (char.mes_example) parts.push(`[ПРИМЕРЫ ДИАЛОГОВ]\n${char.mes_example}`);
         
-        finalSystemPrompt = parts.join('\n\n');
+        finalSystemPrompt = replaceMacros(parts.join('\n\n'), char.name);
         
         if (char.post_history_instructions) {
           finalSystemPrompt += `\n\n[ВАЖНЫЕ ИНСТРУКЦИИ ДЛЯ СЛЕДУЮЩЕГО ОТВЕТА]\n${char.post_history_instructions}`;
@@ -786,7 +795,7 @@ function App() {
                                 avatarBase64: char.avatarBase64
                               });
                               if (char.first_mes) {
-                                addMessageToChat(newChat.id, { role: 'assistant', content: char.first_mes, name: char.name });
+                                addMessageToChat(newChat.id, { role: 'assistant', content: replaceMacros(char.first_mes, char.name), name: char.name });
                               }
                               setActiveChatId(newChat.id);
                             }}
@@ -1010,7 +1019,9 @@ function App() {
           ) : (
             activeChat.messages.map((msg, idx) => {
               const isUser = msg.role === 'user';
-              const parsed = isUser ? { text: msg.content } : parseMessageContent(msg.content, activeChat.type);
+              const charNameForMacro = activeChat.type === 'single' ? activeChat.name : null;
+              const processedContent = replaceMacros(msg.content, charNameForMacro);
+              const parsed = isUser ? { text: processedContent } : parseMessageContent(processedContent, activeChat.type);
               
               let speakerChar = null;
               if (parsed.speaker && activeChat.type === 'group') {
