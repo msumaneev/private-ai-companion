@@ -815,20 +815,20 @@ function App() {
 
               return (
                 <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'} w-full`}>
-                  <div className={`flex max-w-[90%] sm:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end gap-2`}>
+                  <div className={`flex max-w-[90%] sm:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end gap-2 ${editingMessageIndex === idx ? 'w-full' : ''}`}>
                     {!isUser && (
                       <div className="w-8 h-8 rounded-full bg-white/60 flex-shrink-0 flex items-center justify-center overflow-hidden mb-1 border border-indigo-50 shadow-sm">
                         {activeChat.type === 'generator' ? <Bot className="w-5 h-5 text-indigo-400" /> : renderAvatar(avatarSrc)}
                       </div>
                     )}
                     
-                    <div className="flex flex-col group">
+                    <div className={`flex flex-col group ${editingMessageIndex === idx ? 'flex-1 min-w-0' : ''}`}>
                       {!isUser && activeChat.type === 'group' && (
                         <span className="text-xs text-slate-800/70 mb-1 ml-1 font-medium">{displayName}</span>
                       )}
-                      <div className={`flex items-center gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div className={`flex items-center gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'} ${editingMessageIndex === idx ? 'w-full' : ''}`}>
                         <div 
-                          className={`rounded-2xl p-4 ${
+                          className={`rounded-2xl p-4 ${editingMessageIndex === idx ? 'w-full' : ''} ${
                             isUser 
                               ? 'bg-violet-400 hover:bg-violet-500 text-slate-800 rounded-br-sm shadow-md' 
                               : 'bg-white/40 backdrop-blur-xl border border-white/50 text-slate-800 shadow-sm rounded-bl-sm border border-white/40'
@@ -836,7 +836,7 @@ function App() {
                         >
                           <div className={`prose prose-sm max-w-none break-words ${isUser ? 'text-indigo-50 prose-headings:text-slate-800 prose-a:text-violet-400 prose-strong:text-slate-800' : 'text-slate-800'}`}>
                             {editingMessageIndex === idx ? (
-                              <div className="flex flex-col gap-2 w-[80vw] sm:w-[500px] max-w-full">
+                              <div className="flex flex-col gap-2 w-full">
                                 <TextareaAutosize 
                                   minRows={1}
                                   value={editingMessageContent}
