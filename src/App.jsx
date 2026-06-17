@@ -1009,14 +1009,16 @@ function App() {
               )}
             </div>
 
-            <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-white/40 shrink-0">
-              <button onClick={translateCard} disabled={isTranslatingCard || !apiKey} className="px-5 py-2.5 mr-auto text-white bg-blue-500 hover:bg-blue-600 rounded-xl text-sm font-medium disabled:opacity-50 transition flex items-center">
-                {isTranslatingCard ? 'Перевод...' : 'Перевести на русский'}
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/40 shrink-0">
+              <button onClick={translateCard} disabled={isTranslatingCard || !apiKey} className="px-4 py-2.5 mr-auto text-white bg-blue-500 hover:bg-blue-600 rounded-xl text-sm font-medium disabled:opacity-50 transition flex items-center justify-center flex-1 sm:flex-none">
+                {isTranslatingCard ? 'Перевод...' : 'Перевести'}
               </button>
-              <button onClick={() => setShowContactModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Отмена</button>
-              <button onClick={createContact} disabled={!newContactName} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium disabled:opacity-50 transition">
-                {editingCharId ? 'Сохранить' : 'Создать'}
-              </button>
+              <div className="flex gap-2 w-full sm:w-auto justify-end">
+                <button onClick={() => setShowContactModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Отмена</button>
+                <button onClick={createContact} disabled={!newContactName} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium disabled:opacity-50 transition">
+                  {editingCharId ? 'Сохранить' : 'Создать'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
