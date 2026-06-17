@@ -7,12 +7,12 @@ import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 import { parseTavernCard } from './utils/pngParser';
 
-const replaceMacros = (text, charName) => {
+const replaceMacros = (text, charName, userName) => {
   if (!text) return text;
   return text
     .replace(/{{char}}/gi, charName || 'Персонаж')
-    .replace(/{{user}}/gi, 'Пользователь')
-    .replace(/<USER>/gi, 'Пользователь')
+    .replace(/{{user}}/gi, userName || 'Пользователь')
+    .replace(/<USER>/gi, userName || 'Пользователь')
     .replace(/<BOT>/gi, charName || 'Персонаж');
 };
 
@@ -26,7 +26,7 @@ const AVAILABLE_MODELS = [
 ];
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, userName, setUserName } = useStore();
   
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -43,8 +43,8 @@ function App() {
   const [isChubLoading, setIsChubLoading] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  
-  const [input, setInput] = useState('');
+  const [tempApiKey, setTempApiKey] = useState('');
+  const [tempUserName, setTempUserName] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [editingMessageIndex, setEditingMessageIndex] = useState(null);
   const [editingMessageContent, setEditingMessageContent] = useState('');
@@ -67,7 +67,7 @@ function App() {
   const [isCreatingCustomScenario, setIsCreatingCustomScenario] = useState(false);
   const [customScenarioData, setCustomScenarioData] = useState({ title: '', world_context: '', required_characters_count: 2 });
 
-  const [tempApiKey, setTempApiKey] = useState('');
+
   const [balance, setBalance] = useState(null);
 
   const activeChat = chats.find(c => c.id === activeChatId);
@@ -455,7 +455,7 @@ function App() {
         if (char.scenario) parts.push(`[СЦЕНАРИЙ И КОНТЕКСТ МИРА]\n${char.scenario}`);
         if (char.mes_example) parts.push(`[ПРИМЕРЫ ДИАЛОГОВ]\n${char.mes_example}`);
         
-        finalSystemPrompt = replaceMacros(parts.join('\n\n'), char.name);
+        finalSystemPrompt = replaceMacros(parts.join('\n\n'), char.name, userName);
         
         if (char.post_history_instructions) {
           finalSystemPrompt += `\n\n[ВАЖНЫЕ ИНСТРУКЦИИ ДЛЯ СЛЕДУЮЩЕГО ОТВЕТА]\n${char.post_history_instructions}`;
@@ -667,7 +667,7 @@ function App() {
             {balance !== null && <p className="text-xs text-green-600 font-medium mt-0.5">Баланс: ${typeof balance === 'number' ? balance.toFixed(2) : balance}</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button className="text-slate-800/70 hover:text-violet-500 transition p-1" onClick={() => { setTempApiKey(apiKey); setShowSettingsModal(true); }}>
+            <button className="text-slate-800/70 hover:text-violet-500 transition p-1" onClick={() => { setTempApiKey(apiKey); setTempUserName(userName); setShowSettingsModal(true); }}>
               <Settings className="w-5 h-5" />
             </button>
             <button className="md:hidden text-slate-800/70 p-1" onClick={() => setIsSidebarOpen(false)}>
@@ -795,7 +795,7 @@ function App() {
                                 avatarBase64: char.avatarBase64
                               });
                               if (char.first_mes) {
-                                addMessageToChat(newChat.id, { role: 'assistant', content: replaceMacros(char.first_mes, char.name), name: char.name });
+                                addMessageToChat(newChat.id, { role: 'assistant', content: replaceMacros(char.first_mes, char.name, userName), name: char.name });
                               }
                               setActiveChatId(newChat.id);
                             }}
@@ -1020,7 +1020,7 @@ function App() {
             activeChat.messages.map((msg, idx) => {
               const isUser = msg.role === 'user';
               const charNameForMacro = activeChat.type === 'single' ? activeChat.name : null;
-              const processedContent = replaceMacros(msg.content, charNameForMacro);
+              const processedContent = replaceMacros(msg.content, charNameForMacro, userName);
               const parsed = isUser ? { text: processedContent } : parseMessageContent(processedContent, activeChat.type);
               
               let speakerChar = null;
@@ -1569,6 +1569,14 @@ function App() {
             <h3 className="text-xl font-bold mb-4 text-slate-800">Настройки</h3>
             
             <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-800/90 mb-2">Ваше имя (для {'{{user}}'})</label>
+              <input 
+                type="text" 
+                value={tempUserName}
+                onChange={e => setTempUserName(e.target.value)}
+                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 mb-4"
+                placeholder="Михо"
+              />
               <label className="block text-sm font-medium text-slate-800/90 mb-2">OpenRouter API Key</label>
               <input 
                 type="password" 
@@ -1583,7 +1591,7 @@ function App() {
             <div className="flex gap-2 justify-end">
               <button onClick={() => setShowSettingsModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Закрыть</button>
               <button 
-                onClick={() => { setApiKey(tempApiKey); setShowSettingsModal(false); }} 
+                onClick={() => { setApiKey(tempApiKey); setUserName(tempUserName); setShowSettingsModal(false); }} 
                 className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 transition"
               >
                 Сохранить

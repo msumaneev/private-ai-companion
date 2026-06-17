@@ -38,6 +38,7 @@ export const useStore = create(
       autoTranslate: true,
       favoriteModels: [],
       selectedModel: 'sao10k/l3.3-euryale-70b',
+      userName: 'Пользователь',
 
       setSelectedModel: (modelId) => set({ selectedModel: modelId }),
 
@@ -49,6 +50,7 @@ export const useStore = create(
 
       setAutoTranslate: (val) => set({ autoTranslate: val }),
       setApiKey: (key) => set({ apiKey: key }),
+      setUserName: (name) => set({ userName: name }),
       setActiveChatId: (id) => set({ activeChatId: id }),
 
       addCharacter: (character) => {
