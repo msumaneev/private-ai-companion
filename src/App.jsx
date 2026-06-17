@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { compressImage } from './utils/imageCompressor';
 import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
@@ -75,7 +76,10 @@ function App() {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setAvatar(reader.result);
+      reader.onloadend = async () => {
+        const compressed = await compressImage(reader.result, 400, 400);
+        setAvatar(compressed);
+      };
       reader.readAsDataURL(file);
     }
   };
