@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { compressImage } from './utils/imageCompressor';
+import TextareaAutosize from 'react-textarea-autosize';
 import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
@@ -948,19 +949,21 @@ function App() {
                   
                   <div>
                     <label className="block text-sm font-medium text-slate-800/90 mb-1">Системный промпт (Инструкции)</label>
-                    <textarea 
+                    <TextareaAutosize 
+                      minRows={3}
                       value={newContactPrompt}
                       onChange={e => setNewContactPrompt(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-24"
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-800/90 mb-1">Первое сообщение</label>
-                    <textarea 
+                    <TextareaAutosize 
+                      minRows={3}
                       value={newContactFirstMes}
                       onChange={e => setNewContactFirstMes(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-24"
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
                     />
                   </div>
                 </>
@@ -970,18 +973,20 @@ function App() {
                 <>
                   <div>
                     <label className="block text-sm font-medium text-slate-800/90 mb-1">Описание (Внешность, Бэкграунд)</label>
-                    <textarea 
+                    <TextareaAutosize 
+                      minRows={3}
                       value={newContactDescription}
                       onChange={e => setNewContactDescription(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-32"
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-800/90 mb-1">Характер</label>
-                    <textarea 
+                    <TextareaAutosize 
+                      minRows={3}
                       value={newContactPersonality}
                       onChange={e => setNewContactPersonality(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-24"
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
                     />
                   </div>
                 </>
@@ -991,18 +996,20 @@ function App() {
                 <>
                   <div>
                     <label className="block text-sm font-medium text-slate-800/90 mb-1">Сценарий / Мир</label>
-                    <textarea 
+                    <TextareaAutosize 
+                      minRows={3}
                       value={newContactScenario}
                       onChange={e => setNewContactScenario(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-24"
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-800/90 mb-1">Примеры диалогов (mes_example)</label>
-                    <textarea 
+                    <TextareaAutosize 
+                      minRows={3}
                       value={newContactMesExample}
                       onChange={e => setNewContactMesExample(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 resize-y h-48"
+                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
                     />
                   </div>
                 </>
