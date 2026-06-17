@@ -1,7 +1,32 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
+
+const idbStorage = {
+  getItem: async (name) => {
+    const { get } = await import('idb-keyval');
+    let value = await get(name);
+    if (!value) {
+      const localValue = localStorage.getItem(name);
+      if (localValue) {
+        value = localValue;
+      }
+    }
+    return value || null;
+  },
+  setItem: async (name, value) => {
+    const { set } = await import('idb-keyval');
+    await set(name, value);
+    if (localStorage.getItem(name)) {
+      localStorage.removeItem(name);
+    }
+  },
+  removeItem: async (name) => {
+    const { del } = await import('idb-keyval');
+    await del(name);
+  },
+};
 
 export const useStore = create(
   persist(
@@ -12,6 +37,9 @@ export const useStore = create(
       apiKey: '',
       autoTranslate: true,
       favoriteModels: [],
+      selectedModel: 'sao10k/l3.3-euryale-70b',
+
+      setSelectedModel: (modelId) => set({ selectedModel: modelId }),
 
       toggleFavoriteModel: (modelId) => set((state) => ({
         favoriteModels: state.favoriteModels.includes(modelId)
@@ -143,6 +171,7 @@ export const useStore = create(
     }),
     {
       name: 'private-ai-companion-storage',
+      storage: createJSONStorage(() => idbStorage),
     }
   )
 );

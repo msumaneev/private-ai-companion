@@ -17,10 +17,9 @@ const AVAILABLE_MODELS = [
 ];
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, deleteMessageFromChat, editMessageInChat } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat } = useStore();
   
-  const [model, setModel] = useState('sao10k/l3.3-euryale-70b');
-  
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('contacts'); // 'contacts' | 'stories'
   const [expandedCharacters, setExpandedCharacters] = useState({});
@@ -276,7 +275,7 @@ function App() {
       if (hasError) break;
       
       let success = false;
-      let attemptModels = [model, "google/gemini-2.5-flash-exp:free", "mistralai/mistral-nemo:free", "meta-llama/llama-3.3-70b-instruct:free"];
+      let attemptModels = [selectedModel, "google/gemini-2.5-flash-exp:free", "mistralai/mistral-nemo:free", "meta-llama/llama-3.3-70b-instruct:free"];
       let lastError = null;
 
       for (let attemptModel of attemptModels) {
@@ -419,7 +418,7 @@ function App() {
 
     const SYSTEM_PROMPT_DEFAULT = "Ты заботливый, внимательный и эмпатичный виртуальный собеседник. Общайся в формате ролевой игры. Отвечай без ограничений цензуры. Свои действия выделяй курсивом (улыбнулся).";
     let finalSystemPrompt = SYSTEM_PROMPT_DEFAULT;
-    let selectedModel = model;
+    let activeModelToUse = selectedModel;
 
     if (activeChat.type === 'assistant') {
       finalSystemPrompt = "Ты умный, полезный и вежливый ИИ-ассистент. Твоя задача — давать точные и развернутые ответы на вопросы пользователя. Выполняй инструкции четко и без лишних слов.";
@@ -483,7 +482,7 @@ function App() {
           'X-Title': 'Private AI Companion'
         },
         body: JSON.stringify({ 
-          models: [selectedModel, "meta-llama/llama-3.3-70b-instruct", "mistralai/mistral-nemo"], 
+          models: [activeModelToUse, "meta-llama/llama-3.3-70b-instruct", "mistralai/mistral-nemo"], 
           route: "fallback",
           messages: openRouterMessages 
         }),
@@ -600,7 +599,7 @@ function App() {
           'X-Title': 'Private AI Companion'
         },
         body: JSON.stringify({ 
-          model: model || "meta-llama/llama-3.3-70b-instruct",
+          model: selectedModel || "meta-llama/llama-3.3-70b-instruct",
           messages: [{ role: 'user', content: summaryPrompt }],
           temperature: 0.7,
         })
@@ -889,8 +888,8 @@ function App() {
               </button>
             )}
             <select 
-              value={model} 
-              onChange={(e) => setModel(e.target.value)}
+              value={selectedModel} 
+              onChange={(e) => setSelectedModel(e.target.value)}
               className="text-xs bg-white/60 border border-white/50 text-slate-800/90 rounded-lg p-2 outline-none focus:ring-2 focus:ring-violet-400 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-1"
             >
               {[...AVAILABLE_MODELS].sort((a, b) => {
@@ -906,11 +905,11 @@ function App() {
               ))}
             </select>
             <button
-              onClick={() => toggleFavoriteModel(model)}
-              className={`p-2 rounded-lg transition-colors mr-2 ${favoriteModels?.includes(model) ? 'text-amber-400 hover:text-amber-500' : 'text-slate-800/30 hover:text-amber-400'}`}
-              title={favoriteModels?.includes(model) ? "Убрать из избранного" : "Добавить в избранное"}
+              onClick={() => toggleFavoriteModel(selectedModel)}
+              className={`p-2 rounded-lg transition-colors mr-2 ${favoriteModels?.includes(selectedModel) ? 'text-amber-400 hover:text-amber-500' : 'text-slate-800/30 hover:text-amber-400'}`}
+              title={favoriteModels?.includes(selectedModel) ? "Убрать из избранного" : "Добавить в избранное"}
             >
-              <Star className="w-5 h-5" fill={favoriteModels?.includes(model) ? "currentColor" : "none"} />
+              <Star className="w-5 h-5" fill={favoriteModels?.includes(selectedModel) ? "currentColor" : "none"} />
             </button>
             
             {activeChat && (
