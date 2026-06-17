@@ -17,7 +17,7 @@ const AVAILABLE_MODELS = [
 ];
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, favoriteModels, toggleFavoriteModel, deleteMessageFromChat, editMessageInChat } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, deleteMessageFromChat, editMessageInChat } = useStore();
   
   const [model, setModel] = useState('sao10k/l3.3-euryale-70b');
   
@@ -553,6 +553,10 @@ function App() {
     const grouped = {};
     const generators = [];
 
+    characters.forEach(char => {
+      grouped[char.id] = [];
+    });
+
     singleChats.forEach(chat => {
       if (chat.type === 'generator') {
         generators.push(chat);
@@ -731,14 +735,41 @@ function App() {
                             <div 
                               key={chat.id}
                               onClick={() => { setActiveChatId(chat.id); setIsSidebarOpen(false); }}
-                              className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-violet-400 text-white shadow-sm' : 'hover:bg-white/50 text-slate-800'}`}
+                              className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors group/chat ${activeChatId === chat.id ? 'bg-violet-400 text-white shadow-sm' : 'hover:bg-white/50 text-slate-800'}`}
                             >
                               <div className="flex-1 truncate text-sm">
                                 <GitBranch className={`w-3 h-3 inline-block mr-1 ${activeChatId === chat.id ? 'text-white' : 'opacity-50'}`} />
                                 Глава {idx + 1}
                               </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm('Удалить эту главу?')) deleteChat(chat.id);
+                                }}
+                                className={`p-1 rounded opacity-0 group-hover/chat:opacity-100 hover:bg-red-500/20 hover:text-red-500 transition-colors ${activeChatId === chat.id ? 'text-white/80' : 'text-slate-400'}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           ))}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newChat = addChat({
+                                type: 'single',
+                                name: char.name,
+                                characterIds: [char.id],
+                                avatarBase64: char.avatarBase64
+                              });
+                              if (char.first_mes) {
+                                addMessageToChat(newChat.id, { role: 'assistant', content: char.first_mes, name: char.name });
+                              }
+                              setActiveChatId(newChat.id);
+                            }}
+                            className="flex items-center text-xs text-violet-500 font-medium hover:text-violet-600 p-2 opacity-80 hover:opacity-100 w-full text-left"
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Новая ветка
+                          </button>
                         </div>
                       )}
                     </div>
@@ -1258,6 +1289,19 @@ function App() {
                 {isTranslatingCard ? 'Перевод...' : 'Перевести'}
               </button>
               <div className="flex gap-2 w-full sm:w-auto justify-end">
+                {editingCharId && (
+                  <button 
+                    onClick={() => {
+                      if (window.confirm('Вы уверены, что хотите удалить этого персонажа и ВСЕ его главы?')) {
+                        deleteCharacter(editingCharId);
+                        setShowContactModal(false);
+                      }
+                    }} 
+                    className="px-5 py-2.5 text-red-500 bg-transparent rounded-xl text-sm font-medium hover:bg-red-50 transition"
+                  >
+                    Удалить
+                  </button>
+                )}
                 <button onClick={() => setShowContactModal(false)} className="px-5 py-2.5 text-slate-800/80 bg-transparent rounded-xl text-sm font-medium hover:bg-white/50 transition">Отмена</button>
                 <button onClick={createContact} disabled={!newContactName} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium disabled:opacity-50 transition">
                   {editingCharId ? 'Сохранить' : 'Создать'}
