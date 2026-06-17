@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { compressImage } from './utils/imageCompressor';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star, ArrowDown, Pencil, Check } from 'lucide-react';
+import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star, ArrowDown, Pencil, Check, ChevronDown, ChevronRight, Loader2, GitBranch } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 import { parseTavernCard } from './utils/pngParser';
@@ -23,6 +23,8 @@ function App() {
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('contacts'); // 'contacts' | 'stories'
+  const [expandedCharacters, setExpandedCharacters] = useState({});
+  const [isSummarizing, setIsSummarizing] = useState(false);
   
   const [showContactModal, setShowContactModal] = useState(false);
   const [showChubModal, setShowChubModal] = useState(false);
@@ -457,6 +459,10 @@ function App() {
       finalSystemPrompt = `Ты — эксперт по созданию увлекательных сценариев (сюжетов) для текстовых ролевых игр. Пользователь опишет свою задумку, а ты должен помочь развить ее в полноценный сеттинг.\n\nЗадавай уточняющие вопросы, предлагай интересные конфликты и завязки. Когда сюжет согласован, помоги пользователю красиво сформулировать "Название сюжета" и "Контекст/Сеттинг" для создания сценария в приложении. Форматируй свой ответ красиво, используя markdown.`;
     }
 
+    if (activeChat.summary) {
+      finalSystemPrompt += `\n\n[РЕТРОСПЕКТИВА ПРЕДЫДУЩИХ СОБЫТИЙ]:\n${activeChat.summary}\nОпирайся на эту информацию для бесшовного продолжения истории. Не нужно пересказывать её, просто учитывай в своих ответах.`;
+    }
+
     if (autoTranslate) {
       finalSystemPrompt += "\n\n[ВАЖНО: АБСОЛЮТНО ВСЕ СВОИ ОТВЕТЫ, ДЕЙСТВИЯ, МЫСЛИ И РЕПЛИКИ ТЫ ОБЯЗАН ПЕРЕВОДИТЬ И ПИСАТЬ ИСКЛЮЧИТЕЛЬНО НА РУССКОМ ЯЗЫКЕ. ДАЖЕ ЕСЛИ ПЕРСОНАЖ АНГЛОЯЗЫЧНЫЙ, ТЫ ПЕРЕВОДИШЬ ЕГО РЕПЛИКИ НА РУССКИЙ КАЧЕСТВЕННЫМ ХУДОЖЕСТВЕННЫМ СТИЛЕМ. DO NOT USE ENGLISH, RUSSIAN ONLY.]";
     }
@@ -542,6 +548,84 @@ function App() {
     return <img src={avatarBase64} className="w-full h-full object-cover" />;
   };
 
+  const getGroupedContacts = () => {
+    const singleChats = chats.filter(c => c.type === 'single' || c.type === 'generator');
+    const grouped = {};
+    const generators = [];
+
+    singleChats.forEach(chat => {
+      if (chat.type === 'generator') {
+        generators.push(chat);
+        return;
+      }
+      const charId = chat.characterIds[0];
+      if (!charId) return;
+      if (!grouped[charId]) {
+        grouped[charId] = [];
+      }
+      grouped[charId].push(chat);
+    });
+
+    Object.keys(grouped).forEach(charId => {
+      grouped[charId].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    });
+
+    return { grouped, generators };
+  };
+
+  const toggleCharacterAccordion = (charId, e) => {
+    if (e) e.stopPropagation();
+    setExpandedCharacters(prev => ({ ...prev, [charId]: !prev[charId] }));
+  };
+
+  const handleSummarizeChat = async () => {
+    if (!activeChat || activeChat.messages.length === 0 || !apiKey) return;
+    
+    setIsSummarizing(true);
+    
+    const messagesText = activeChat.messages.map(m => `${m.role === 'user' ? 'Пользователь' : 'Персонаж'}: ${m.content}`).join('\n\n');
+    const summaryPrompt = `Сделай подробный пересказ текущей ролевой игры, сфокусируйся на отношениях между персонажем и пользователем, опиши текущую сцену, важные факты и чем всё закончилось, чтобы бесшовно продолжить историю в следующей главе.\n\n[ИСТОРИЯ ЧАТА]:\n${messagesText}`;
+    
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': window.location.href,
+          'X-Title': 'Private AI Companion'
+        },
+        body: JSON.stringify({ 
+          models: [model, "meta-llama/llama-3.3-70b-instruct"], 
+          messages: [{ role: 'user', content: summaryPrompt }],
+          temperature: 0.7,
+        })
+      });
+
+      const data = await response.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        const summaryText = data.choices[0].message.content;
+        
+        // Create new chat
+        const newChat = addChat({
+          type: activeChat.type,
+          name: activeChat.name,
+          characterIds: activeChat.characterIds,
+          avatarBase64: activeChat.avatarBase64,
+          parentId: activeChat.id,
+          summary: summaryText
+        });
+        
+        setActiveChatId(newChat.id);
+      }
+    } catch (error) {
+      console.error('Summarization failed:', error);
+      alert('Ошибка при создании пересказа.');
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
   return (
     <div className="flex h-[100dvh] bg-transparent relative overflow-hidden">
       {isSidebarOpen && (
@@ -582,40 +666,87 @@ function App() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {activeTab === 'contacts' ? (
-            <>
-              {chats.filter(c => c.type === 'single' || c.type === 'generator').map(chat => (
-                <div 
-                  key={chat.id} 
-                  onClick={() => { setActiveChatId(chat.id); setIsSidebarOpen(false); }}
-                  className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-white/50' : 'hover:bg-white/60'}`}
-                >
-                  <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
-                    {chat.type === 'generator' ? <Bot className="text-violet-500 w-5 h-5" /> : renderAvatar(chat.avatarBase64)}
+          {activeTab === 'contacts' ? (() => {
+            const { grouped, generators } = getGroupedContacts();
+            const characterIds = Object.keys(grouped);
+            
+            return (
+              <>
+                {generators.map(chat => (
+                  <div 
+                    key={chat.id} 
+                    onClick={() => { setActiveChatId(chat.id); setIsSidebarOpen(false); }}
+                    className={`flex items-center p-3 rounded-xl cursor-pointer transition-colors mb-1 ${activeChatId === chat.id ? 'bg-white/50' : 'hover:bg-white/60'}`}
+                  >
+                    <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                      <Bot className="text-violet-500 w-5 h-5" />
+                    </div>
+                    <div className="overflow-hidden flex-1">
+                      <h3 className="font-medium text-slate-800 text-sm truncate">{chat.name}</h3>
+                      <p className="text-xs text-slate-800/70 truncate">Служебный чат</p>
+                    </div>
                   </div>
-                  <div className="overflow-hidden flex-1">
-                    <h3 className="font-medium text-slate-800 text-sm truncate">{chat.name}</h3>
-                    <p className="text-xs text-slate-800/70 truncate">{chat.type === 'generator' ? 'Служебный чат' : 'Тет-а-тет'}</p>
-                  </div>
-                  {chat.type === 'single' && (
-                    <button 
-                      onClick={(e) => { 
-                         e.stopPropagation(); 
-                         const char = characters.find(c => c.id === chat.characterIds[0]); 
-                         if(char) openEditContact(char); 
-                      }} 
-                      className="p-2 text-slate-800/40 hover:text-violet-500 hover:bg-white/40 rounded-lg transition-colors ml-2 shrink-0"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {chats.filter(c => c.type === 'single' || c.type === 'generator').length === 0 && (
-                <div className="text-center text-slate-800/50 text-sm mt-10">Нет контактов</div>
-              )}
-            </>
-          ) : (
+                ))}
+
+                {characterIds.map(charId => {
+                  const char = characters.find(c => c.id === charId);
+                  if (!char) return null;
+                  const charChats = grouped[charId];
+                  const isExpanded = expandedCharacters[charId];
+                  
+                  return (
+                    <div key={charId} className="mb-1">
+                      <div 
+                        onClick={() => toggleCharacterAccordion(charId)}
+                        className="flex items-center p-3 rounded-xl cursor-pointer transition-colors hover:bg-white/60 group"
+                      >
+                        <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                          {renderAvatar(char.avatarBase64)}
+                        </div>
+                        <div className="overflow-hidden flex-1">
+                          <h3 className="font-medium text-slate-800 text-sm truncate">{char.name}</h3>
+                          <p className="text-xs text-slate-800/70 truncate">{charChats.length} {charChats.length === 1 ? 'глава' : (charChats.length < 5 ? 'главы' : 'глав')}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              openEditContact(char); 
+                            }} 
+                            className="p-2 text-slate-800/40 hover:text-violet-500 hover:bg-white/40 rounded-lg transition-colors mr-1 shrink-0 opacity-0 group-hover:opacity-100"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                          {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-800/40" /> : <ChevronRight className="w-4 h-4 text-slate-800/40" />}
+                        </div>
+                      </div>
+                      
+                      {isExpanded && (
+                        <div className="ml-10 pl-3 py-1 border-l-2 border-white/40 space-y-1">
+                          {charChats.map((chat, idx) => (
+                            <div 
+                              key={chat.id}
+                              onClick={() => { setActiveChatId(chat.id); setIsSidebarOpen(false); }}
+                              className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${activeChatId === chat.id ? 'bg-violet-400 text-white shadow-sm' : 'hover:bg-white/50 text-slate-800'}`}
+                            >
+                              <div className="flex-1 truncate text-sm">
+                                <GitBranch className={`w-3 h-3 inline-block mr-1 ${activeChatId === chat.id ? 'text-white' : 'opacity-50'}`} />
+                                Глава {idx + 1}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {generators.length === 0 && characterIds.length === 0 && (
+                  <div className="text-center text-slate-800/50 text-sm mt-10">Нет контактов</div>
+                )}
+              </>
+            );
+          })() : (
             <>
               {chats.filter(c => c.type === 'group' || c.type === 'plot_generator').map(chat => (
                 <div 
@@ -712,6 +843,16 @@ function App() {
           )}
 
           <div className="flex items-center">
+            {activeChat && activeChat.type === 'single' && (
+              <button
+                onClick={handleSummarizeChat}
+                disabled={isSummarizing || activeChat.messages.length === 0}
+                className="mr-2 p-2 bg-white/60 text-violet-500 rounded-lg hover:bg-white/80 transition-colors disabled:opacity-50"
+                title="Завершить главу и начать новую (Саммари)"
+              >
+                {isSummarizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitBranch className="w-4 h-4" />}
+              </button>
+            )}
             <select 
               value={model} 
               onChange={(e) => setModel(e.target.value)}

@@ -67,7 +67,14 @@ export const useStore = create(
       },
 
       addChat: (chat) => {
-        const newChat = { ...chat, id: generateId(), messages: [] };
+        const newChat = { 
+          ...chat, 
+          id: generateId(), 
+          messages: chat.messages || [],
+          createdAt: Date.now(),
+          parentId: chat.parentId || null,
+          summary: chat.summary || ''
+        };
         set((state) => ({ chats: [...state.chats, newChat], activeChatId: newChat.id }));
         return newChat;
       },
