@@ -11,6 +11,13 @@ export const useStore = create(
       activeChatId: null,
       apiKey: '',
       autoTranslate: true,
+      favoriteModels: [],
+
+      toggleFavoriteModel: (modelId) => set((state) => ({
+        favoriteModels: state.favoriteModels.includes(modelId)
+          ? state.favoriteModels.filter(id => id !== modelId)
+          : [...state.favoriteModels, modelId]
+      })),
 
       setAutoTranslate: (val) => set({ autoTranslate: val }),
       setApiKey: (key) => set({ apiKey: key }),
@@ -78,6 +85,18 @@ export const useStore = create(
           chats: state.chats.map((chat) =>
             chat.id === chatId ? { ...chat, messages: [] } : chat
           ),
+        }));
+      },
+
+      deleteMessageFromChat: (chatId, messageIndex) => {
+        set((state) => ({
+          chats: state.chats.map((chat) => {
+            if (chat.id !== chatId) return chat;
+            return {
+              ...chat,
+              messages: chat.messages.filter((_, idx) => idx !== messageIndex)
+            };
+          })
         }));
       },
 

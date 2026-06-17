@@ -2,13 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { compressImage } from './utils/imageCompressor';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser } from 'lucide-react';
+import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 import { parseTavernCard } from './utils/pngParser';
 
+const AVAILABLE_MODELS = [
+  { id: 'sao10k/l3.3-euryale-70b', name: 'Euryale Llama 3.3 70B (Uncensored)' },
+  { id: 'anthracite-org/magnum-v4-72b', name: 'Magnum v4 72B (Uncensored)' },
+  { id: 'alpindale/goliath-120b', name: 'Goliath 120B (Uncensored)' },
+  { id: 'nousresearch/hermes-3-llama-3.1-405b', name: 'Hermes 3 405B (Uncensored)' },
+  { id: 'sophosympatheia/midnight-miqu-14x8b', name: 'Midnight Miqu 103B (Uncensored)' },
+  { id: 'neversleep/noromaid-20b', name: 'Noromaid 20B (Uncensored)' },
+];
+
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, favoriteModels, toggleFavoriteModel, deleteMessageFromChat } = useStore();
   
   const [model, setModel] = useState('sao10k/l3.3-euryale-70b');
   
@@ -695,15 +704,27 @@ function App() {
             <select 
               value={model} 
               onChange={(e) => setModel(e.target.value)}
-              className="text-xs bg-white/60 border border-white/50 text-slate-800/90 rounded-lg p-2 outline-none focus:ring-2 focus:ring-violet-400 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-2"
+              className="text-xs bg-white/60 border border-white/50 text-slate-800/90 rounded-lg p-2 outline-none focus:ring-2 focus:ring-violet-400 max-w-[120px] sm:max-w-none disabled:opacity-50 mr-1"
             >
-              <option value="sao10k/l3.3-euryale-70b">Euryale Llama 3.3 70B (Uncensored)</option>
-              <option value="anthracite-org/magnum-v4-72b">Magnum v4 72B (Uncensored)</option>
-              <option value="alpindale/goliath-120b">Goliath 120B (Uncensored)</option>
-              <option value="nousresearch/hermes-3-llama-3.1-405b">Hermes 3 405B (Uncensored)</option>
-              <option value="sophosympatheia/midnight-miqu-14x8b">Midnight Miqu 103B (Uncensored)</option>
-              <option value="neversleep/noromaid-20b">Noromaid 20B (Uncensored)</option>
+              {[...AVAILABLE_MODELS].sort((a, b) => {
+                const aFav = favoriteModels?.includes(a.id);
+                const bFav = favoriteModels?.includes(b.id);
+                if (aFav && !bFav) return -1;
+                if (!aFav && bFav) return 1;
+                return 0;
+              }).map(m => (
+                <option key={m.id} value={m.id}>
+                  {favoriteModels?.includes(m.id) ? '⭐ ' : ''}{m.name}
+                </option>
+              ))}
             </select>
+            <button
+              onClick={() => toggleFavoriteModel(model)}
+              className={`p-2 rounded-lg transition-colors mr-2 ${favoriteModels?.includes(model) ? 'text-amber-400 hover:text-amber-500' : 'text-slate-800/30 hover:text-amber-400'}`}
+              title={favoriteModels?.includes(model) ? "Убрать из избранного" : "Добавить в избранное"}
+            >
+              <Star className="w-5 h-5" fill={favoriteModels?.includes(model) ? "currentColor" : "none"} />
+            </button>
             
             {activeChat && (
               <>
@@ -790,35 +811,45 @@ function App() {
                       </div>
                     )}
                     
-                    <div className="flex flex-col">
+                    <div className="flex flex-col group">
                       {!isUser && activeChat.type === 'group' && (
                         <span className="text-xs text-slate-800/70 mb-1 ml-1 font-medium">{displayName}</span>
                       )}
-                      <div 
-                        className={`rounded-2xl p-4 ${
-                          isUser 
-                            ? 'bg-violet-400 hover:bg-violet-500 text-slate-800 rounded-br-sm shadow-md' 
-                            : 'bg-white/40 backdrop-blur-xl border border-white/50 text-slate-800 shadow-sm rounded-bl-sm border border-white/40'
-                        }`}
-                      >
-                        <div className={`prose prose-sm max-w-none break-words ${isUser ? 'text-indigo-50 prose-headings:text-slate-800 prose-a:text-violet-400 prose-strong:text-slate-800' : 'text-slate-800'}`}>
-                          <ReactMarkdown>{parsed.text}</ReactMarkdown>
+                      <div className={`flex items-center gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div 
+                          className={`rounded-2xl p-4 ${
+                            isUser 
+                              ? 'bg-violet-400 hover:bg-violet-500 text-slate-800 rounded-br-sm shadow-md' 
+                              : 'bg-white/40 backdrop-blur-xl border border-white/50 text-slate-800 shadow-sm rounded-bl-sm border border-white/40'
+                          }`}
+                        >
+                          <div className={`prose prose-sm max-w-none break-words ${isUser ? 'text-indigo-50 prose-headings:text-slate-800 prose-a:text-violet-400 prose-strong:text-slate-800' : 'text-slate-800'}`}>
+                            <ReactMarkdown>{parsed.text}</ReactMarkdown>
+                          </div>
+                          
+                          {extractedJSON && (
+                            <div className="mt-4 p-4 bg-white/50 rounded-xl border border-indigo-100">
+                              <h4 className="font-bold text-fuchsia-900 mb-2 flex items-center gap-2">
+                                {extractedJSON.avatar_emoji} {extractedJSON.name}
+                              </h4>
+                              <p className="text-xs text-fuchsia-700 mb-4 line-clamp-3">{extractedJSON.system_prompt}</p>
+                              <button 
+                                onClick={() => saveExtractedCharacter(extractedJSON)}
+                                className="w-full flex justify-center items-center gap-2 py-2 bg-violet-400 hover:bg-violet-500 text-slate-800 text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
+                              >
+                                <Plus className="w-4 h-4" /> Добавить в контакты
+                              </button>
+                            </div>
+                          )}
                         </div>
                         
-                        {extractedJSON && (
-                          <div className="mt-4 p-4 bg-white/50 rounded-xl border border-indigo-100">
-                            <h4 className="font-bold text-fuchsia-900 mb-2 flex items-center gap-2">
-                              {extractedJSON.avatar_emoji} {extractedJSON.name}
-                            </h4>
-                            <p className="text-xs text-fuchsia-700 mb-4 line-clamp-3">{extractedJSON.system_prompt}</p>
-                            <button 
-                              onClick={() => saveExtractedCharacter(extractedJSON)}
-                              className="w-full flex justify-center items-center gap-2 py-2 bg-violet-400 hover:bg-violet-500 text-slate-800 text-sm font-medium rounded-lg hover:bg-indigo-700 transition"
-                            >
-                              <Plus className="w-4 h-4" /> Добавить в контакты
-                            </button>
-                          </div>
-                        )}
+                        <button 
+                          onClick={() => deleteMessageFromChat(activeChat.id, idx)} 
+                          className="opacity-100 sm:opacity-0 group-hover:opacity-100 p-2 text-slate-800/30 hover:text-red-500 transition-all shrink-0"
+                          title="Удалить сообщение"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
