@@ -609,7 +609,7 @@ function App() {
     setIsSummarizing(true);
     
     const messagesText = activeChat.messages.map(m => `${m.role === 'user' ? 'Пользователь' : 'Персонаж'}: ${m.content}`).join('\n\n');
-    const summaryPrompt = `Сделай подробный пересказ текущей ролевой игры, сфокусируйся на отношениях между персонажем и пользователем, опиши текущую сцену, важные факты и чем всё закончилось, чтобы бесшовно продолжить историю в следующей главе.\n\n[ИСТОРИЯ ЧАТА]:\n${messagesText}`;
+    const summaryPrompt = `Сделай подробный пересказ предоставленной истории ролевой игры. Сфокусируйся на отношениях между персонажем и пользователем. Опиши текущую сцену, важные факты и чем всё закончилось.\nВАЖНО: Пиши только сам пересказ (от 3 лица). Не извиняйся, не задавай вопросов, не комментируй.\n\n[ИСТОРИЯ ЧАТА]:\n${messagesText}`;
     
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -622,8 +622,11 @@ function App() {
         },
         body: JSON.stringify({ 
           model: selectedModel || "meta-llama/llama-3.3-70b-instruct",
-          messages: [{ role: 'user', content: summaryPrompt }],
-          temperature: 0.7,
+          messages: [
+            { role: 'system', content: 'Ты полезный ИИ-ассистент. Твоя единственная задача — составлять сухие, точные и детальные саммари (пересказы) логов ролевых игр. Ты не задаешь вопросов и не отказываешься от задачи.' },
+            { role: 'user', content: summaryPrompt }
+          ],
+          temperature: 0.3,
         })
       });
 
