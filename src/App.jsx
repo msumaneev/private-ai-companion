@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { compressImage } from './utils/imageCompressor';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star } from 'lucide-react';
+import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star, ArrowDown } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 import { parseTavernCard } from './utils/pngParser';
@@ -57,20 +57,26 @@ function App() {
   const [balance, setBalance] = useState(null);
 
   const activeChat = chats.find(c => c.id === activeChatId);
+  const [showScrollButton, setShowScrollButton] = useState(false);  const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+    setShowScrollButton(!isNearBottom);
+  };
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollButton(false);
+  };
   const fetchBalance = async () => {
     if (!apiKey) return;
     try {
-      const res = await fetch('https://openrouter.ai/api/v1/credits', {
-        headers: { Authorization: `Bearer ${apiKey}` }
+      const response = await fetch('https://openrouter.ai/api/v1/auth/key', {
+        headers: { 'Authorization': `Bearer ${apiKey}` }
       });
-      const data = await res.json();
-      if (data && data.data) {
-        const remaining = (data.data.total_credits || 0) - (data.data.total_usage || 0);
-        setBalance(remaining.toFixed(4));
-      }
-    } catch (err) {
-      console.error("Failed to fetch balance", err);
+      const data = await response.json();
+      setBalance(data.data?.limit ? (data.data.limit - data.data.usage) : null);
+    } catch (e) {
+      console.error('Failed to fetch balance', e);
     }
   };
 
@@ -79,7 +85,9 @@ function App() {
   }, [apiKey]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!showScrollButton) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [activeChat?.messages, isTyping]);
 
   const handleImageUpload = (e, setAvatar) => {
@@ -400,6 +408,7 @@ function App() {
 
     const userMessage = { role: 'user', content: input.trim() };
     addMessageToChat(activeChatId, userMessage);
+    scrollToBottom();
     
     setInput('');
     setIsTyping(true);
@@ -761,7 +770,7 @@ function App() {
         </header>
 
         {/* Chat Messages */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-transparent">
+        <main onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-transparent relative">
           {!activeChat ? (
             <div className="h-full flex items-center justify-center text-slate-800/50">
               <div className="text-center">
@@ -874,6 +883,16 @@ function App() {
           )}
           <div ref={messagesEndRef} className="h-1" />
         </main>
+        
+        {showScrollButton && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-24 right-4 md:right-8 p-3 bg-violet-400 text-white rounded-full shadow-lg hover:bg-violet-500 transition-all z-20"
+            title="Вниз"
+          >
+            <ArrowDown className="w-5 h-5" />
+          </button>
+        )}
 
         {/* Input Area */}
         <footer className="bg-white/40 backdrop-blur-xl border border-white/50 p-3 md:p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] shrink-0 z-10">
