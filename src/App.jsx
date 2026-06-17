@@ -895,14 +895,14 @@ function App() {
                 <h1 className="font-semibold text-slate-800 text-lg leading-tight truncate">{activeChat.name}</h1>
                 <p className="text-xs text-slate-800/70 truncate flex items-center gap-2">
                   <span>{activeChat.type === 'group' ? `${activeChat.characterIds.length} персонажей` : (activeChat.type === 'generator' ? 'Генерация персонажа' : (activeChat.type === 'plot_generator' ? 'Генерация сюжета' : 'Online'))}</span>
-                  {balance !== null && <span className="text-green-600 font-medium md:hidden">${typeof balance === 'number' ? balance.toFixed(4) : balance}</span>}
+                  {balance !== null && <span className="text-green-600 font-medium">${typeof balance === 'number' ? balance.toFixed(4) : balance}</span>}
                 </p>
               </div>
             </>
           ) : (
             <div className="flex-1 text-slate-800/70 font-medium flex items-center gap-2">
               <span>Выберите чат</span>
-              {balance !== null && <span className="text-green-600 font-medium md:hidden text-sm">${typeof balance === 'number' ? balance.toFixed(4) : balance}</span>}
+              {balance !== null && <span className="text-green-600 font-medium text-sm">${typeof balance === 'number' ? balance.toFixed(4) : balance}</span>}
             </div>
           )}
 
