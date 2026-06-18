@@ -198,7 +198,7 @@ function App() {
     if (!chubQuery) return;
     setIsChubLoading(true);
     try {
-      const res = await fetch(`https://api.chub.ai/search?search=${encodeURIComponent(chubQuery)}&first=30&nsfw=true`);
+      const res = await fetch(`https://api.chub.ai/search?search=${encodeURIComponent(chubQuery)}&first=30&nsfw=true&venus=true`);
       const data = await res.json();
       const nodes = data.data?.nodes || data.nodes || [];
       
