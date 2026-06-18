@@ -1047,7 +1047,7 @@ function App() {
 
               return (
                 <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'} w-full`}>
-                  <div className={`flex max-w-[95%] md:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end gap-2 w-full ${editingMessageIndex === idx ? 'w-full' : 'md:w-auto'}`}>
+                  <div className={`flex max-w-[95%] md:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end gap-2 ${editingMessageIndex === idx ? 'w-full' : ''}`}>
                     
                     {/* Desktop Avatar (hidden on mobile) */}
                     {!isUser && (
@@ -1059,7 +1059,7 @@ function App() {
                       </div>
                     )}
                     
-                    <div className={`flex flex-col group flex-1 min-w-0 md:flex-none ${editingMessageIndex === idx ? 'md:flex-1' : ''}`}>
+                    <div className={`flex flex-col group min-w-0 ${editingMessageIndex === idx ? 'flex-1' : ''}`}>
                       
                       {/* Mobile Header: Mini-avatar + Name */}
                       {!isUser && (
