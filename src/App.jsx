@@ -39,6 +39,8 @@ function App() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showChubModal, setShowChubModal] = useState(false);
   const [chubQuery, setChubQuery] = useState('');
+  const [chubIncludeNsfw, setChubIncludeNsfw] = useState(true);
+  const [chubIncludeVenus, setChubIncludeVenus] = useState(true);
   const [chubResults, setChubResults] = useState([]);
   const [isChubLoading, setIsChubLoading] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
@@ -198,7 +200,10 @@ function App() {
     if (!chubQuery) return;
     setIsChubLoading(true);
     try {
-      const res = await fetch(`https://api.chub.ai/search?search=${encodeURIComponent(chubQuery)}&first=30&nsfw=true&venus=true`);
+      let searchUrl = `https://api.chub.ai/search?search=${encodeURIComponent(chubQuery)}&first=30`;
+      if (chubIncludeNsfw) searchUrl += '&nsfw=true';
+      if (chubIncludeVenus) searchUrl += '&venus=true';
+      const res = await fetch(searchUrl);
       const data = await res.json();
       const nodes = data.data?.nodes || data.nodes || [];
       
@@ -1401,17 +1406,39 @@ function App() {
               <button onClick={() => setShowChubModal(false)} className="text-slate-800/50 hover:text-slate-800"><X className="w-5 h-5"/></button>
             </div>
             
-            <form onSubmit={searchChub} className="flex gap-2 mb-4">
-              <input 
-                type="text" 
-                value={chubQuery}
-                onChange={e => setChubQuery(e.target.value)}
-                placeholder="Поиск персонажей (на английском)..."
-                className="flex-1 border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 bg-white/50"
-              />
-              <button type="submit" disabled={isChubLoading} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition">
-                {isChubLoading ? 'Поиск...' : 'Найти'}
-              </button>
+            <form onSubmit={searchChub} className="flex flex-col gap-3 mb-4">
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={chubQuery}
+                  onChange={e => setChubQuery(e.target.value)}
+                  placeholder="Поиск персонажей (на английском)..."
+                  className="flex-1 border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 bg-white/50"
+                />
+                <button type="submit" disabled={isChubLoading} className="px-5 py-2.5 text-white bg-violet-400 hover:bg-violet-500 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition">
+                  {isChubLoading ? 'Поиск...' : 'Найти'}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-4 px-1">
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-800/80 hover:text-slate-800 transition">
+                  <input 
+                    type="checkbox" 
+                    checked={chubIncludeNsfw}
+                    onChange={e => setChubIncludeNsfw(e.target.checked)}
+                    className="rounded border-white/50 text-violet-500 focus:ring-violet-400 bg-white/50 cursor-pointer w-4 h-4"
+                  />
+                  Искать NSFW (18+)
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-800/80 hover:text-slate-800 transition">
+                  <input 
+                    type="checkbox" 
+                    checked={chubIncludeVenus}
+                    onChange={e => setChubIncludeVenus(e.target.checked)}
+                    className="rounded border-white/50 text-violet-500 focus:ring-violet-400 bg-white/50 cursor-pointer w-4 h-4"
+                  />
+                  База Venus (откровенный контент)
+                </label>
+              </div>
             </form>
 
             <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
