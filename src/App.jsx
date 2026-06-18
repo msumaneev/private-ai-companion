@@ -43,6 +43,7 @@ function App() {
   const [isChubLoading, setIsChubLoading] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
   const [input, setInput] = useState('');
   const [tempApiKey, setTempApiKey] = useState('');
   const [tempUserName, setTempUserName] = useState('');
@@ -1046,16 +1047,36 @@ function App() {
 
               return (
                 <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'} w-full`}>
-                  <div className={`flex max-w-[90%] sm:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end gap-2 ${editingMessageIndex === idx ? 'w-full' : ''}`}>
+                  <div className={`flex max-w-[95%] md:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end gap-2 w-full ${editingMessageIndex === idx ? 'w-full' : 'md:w-auto'}`}>
+                    
+                    {/* Desktop Avatar (hidden on mobile) */}
                     {!isUser && (
-                      <div className="w-8 h-8 rounded-full bg-white/60 flex-shrink-0 flex items-center justify-center overflow-hidden mb-1 border border-indigo-50 shadow-sm">
+                      <div 
+                        className="hidden md:flex w-8 h-8 rounded-full bg-white/60 flex-shrink-0 items-center justify-center overflow-hidden mb-1 border border-indigo-50 shadow-sm cursor-pointer hover:opacity-80 transition"
+                        onClick={() => { if (avatarSrc) setFullscreenImage(avatarSrc); }}
+                      >
                         {activeChat.type === 'generator' ? <Bot className="w-5 h-5 text-indigo-400" /> : renderAvatar(avatarSrc)}
                       </div>
                     )}
                     
-                    <div className={`flex flex-col group ${editingMessageIndex === idx ? 'flex-1 min-w-0' : ''}`}>
+                    <div className={`flex flex-col group flex-1 min-w-0 md:flex-none ${editingMessageIndex === idx ? 'md:flex-1' : ''}`}>
+                      
+                      {/* Mobile Header: Mini-avatar + Name */}
+                      {!isUser && (
+                        <div className="flex md:hidden items-center gap-2 mb-1.5 ml-1">
+                          <div 
+                            className="w-5 h-5 rounded-full bg-white/60 flex-shrink-0 flex items-center justify-center overflow-hidden border border-indigo-50 shadow-sm cursor-pointer hover:opacity-80 transition"
+                            onClick={() => { if (avatarSrc) setFullscreenImage(avatarSrc); }}
+                          >
+                            {activeChat.type === 'generator' ? <Bot className="w-3.5 h-3.5 text-indigo-400" /> : renderAvatar(avatarSrc)}
+                          </div>
+                          <span className="text-xs text-slate-800/70 font-medium">{displayName}</span>
+                        </div>
+                      )}
+
+                      {/* Desktop Name for Group chats */}
                       {!isUser && activeChat.type === 'group' && (
-                        <span className="text-xs text-slate-800/70 mb-1 ml-1 font-medium">{displayName}</span>
+                        <span className="hidden md:inline-block text-xs text-slate-800/70 mb-1 ml-1 font-medium">{displayName}</span>
                       )}
                       <div className={`flex items-center gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'} ${editingMessageIndex === idx ? 'w-full' : ''}`}>
                         <div 
@@ -1250,7 +1271,10 @@ function App() {
                   <div>
                     <label className="block text-sm font-medium text-slate-800/90 mb-2">Аватар</label>
                     <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 rounded-full bg-transparent border border-white/50 overflow-hidden flex items-center justify-center shrink-0">
+                      <div 
+                        className={`w-16 h-16 rounded-full bg-transparent border border-white/50 overflow-hidden flex items-center justify-center shrink-0 ${newContactAvatar ? 'cursor-pointer hover:opacity-80 transition' : ''}`}
+                        onClick={() => { if (newContactAvatar) setFullscreenImage(newContactAvatar); }}
+                      >
                         {newContactAvatar ? <img src={newContactAvatar} className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-800/50 w-6 h-6" />}
                       </div>
                       <label className="cursor-pointer bg-white/40 backdrop-blur-xl border border-white/50 text-slate-800/90 py-2 px-4 rounded-xl text-sm font-medium hover:bg-white/60 transition w-full text-center">
@@ -1675,6 +1699,27 @@ function App() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Fullscreen Image Viewer */}
+      {fullscreenImage && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <img 
+            src={fullscreenImage} 
+            alt="Fullscreen" 
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button 
+            onClick={() => setFullscreenImage(null)}
+            className="absolute top-4 right-4 text-white/50 hover:text-white bg-black/50 hover:bg-black/80 rounded-full p-2 transition"
+          >
+            <X className="w-8 h-8" />
+          </button>
         </div>
       )}
 
