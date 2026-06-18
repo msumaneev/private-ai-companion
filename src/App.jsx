@@ -25,6 +25,43 @@ const AVAILABLE_MODELS = [
   { id: 'neversleep/noromaid-20b', name: 'Noromaid 20B (Uncensored)' },
 ];
 
+const CollapsibleField = ({ label, value, onChange, placeholder }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isEmpty = !value || value.trim() === '';
+
+  return (
+    <div className="mb-3 bg-white/30 backdrop-blur-sm rounded-xl border border-white/50 overflow-hidden transition-all">
+      <div 
+        className="flex justify-between items-start p-3 cursor-pointer hover:bg-white/40 transition"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex-1 overflow-hidden pr-2">
+          <h4 className="text-sm font-semibold text-slate-800">{label}</h4>
+          {!expanded && (
+            <p className="text-xs text-slate-800/60 line-clamp-2 mt-1 break-words whitespace-pre-wrap">
+              {isEmpty ? <span className="italic opacity-50">Пусто...</span> : value}
+            </p>
+          )}
+        </div>
+        <button className="text-slate-800/40 p-1 shrink-0 mt-0.5" type="button">
+          <ChevronDown className={`w-5 h-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+      {expanded && (
+        <div className="p-3 pt-0">
+          <TextareaAutosize 
+            minRows={3}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder={placeholder}
+            className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400 bg-white/50"
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
 function App() {
   const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName } = useStore();
   
@@ -1299,71 +1336,47 @@ function App() {
                     />
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Системный промпт (Инструкции)</label>
-                    <TextareaAutosize 
-                      minRows={3}
-                      value={newContactPrompt}
-                      onChange={e => setNewContactPrompt(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
-                    />
-                  </div>
+                  <CollapsibleField
+                    label="Системный промпт (Инструкции)"
+                    value={newContactPrompt}
+                    onChange={setNewContactPrompt}
+                  />
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Первое сообщение</label>
-                    <TextareaAutosize 
-                      minRows={3}
-                      value={newContactFirstMes}
-                      onChange={e => setNewContactFirstMes(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
-                    />
-                  </div>
+                  <CollapsibleField
+                    label="Первое сообщение"
+                    value={newContactFirstMes}
+                    onChange={setNewContactFirstMes}
+                  />
                 </>
               )}
 
               {contactModalTab === 'details' && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Описание (Внешность, Бэкграунд)</label>
-                    <TextareaAutosize 
-                      minRows={3}
-                      value={newContactDescription}
-                      onChange={e => setNewContactDescription(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Характер</label>
-                    <TextareaAutosize 
-                      minRows={3}
-                      value={newContactPersonality}
-                      onChange={e => setNewContactPersonality(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
-                    />
-                  </div>
+                  <CollapsibleField
+                    label="Описание (Внешность, Бэкграунд)"
+                    value={newContactDescription}
+                    onChange={setNewContactDescription}
+                  />
+                  <CollapsibleField
+                    label="Характер"
+                    value={newContactPersonality}
+                    onChange={setNewContactPersonality}
+                  />
                 </>
               )}
 
               {contactModalTab === 'examples' && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Сценарий / Мир</label>
-                    <TextareaAutosize 
-                      minRows={3}
-                      value={newContactScenario}
-                      onChange={e => setNewContactScenario(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-800/90 mb-1">Примеры диалогов (mes_example)</label>
-                    <TextareaAutosize 
-                      minRows={3}
-                      value={newContactMesExample}
-                      onChange={e => setNewContactMesExample(e.target.value)}
-                      className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-violet-400"
-                    />
-                  </div>
+                  <CollapsibleField
+                    label="Сценарий / Мир"
+                    value={newContactScenario}
+                    onChange={setNewContactScenario}
+                  />
+                  <CollapsibleField
+                    label="Примеры диалогов (mes_example)"
+                    value={newContactMesExample}
+                    onChange={setNewContactMesExample}
+                  />
                 </>
               )}
             </div>
