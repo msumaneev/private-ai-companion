@@ -956,10 +956,14 @@ function App() {
                 {activeChat.type === 'generator' ? <Bot className="text-violet-500 w-6 h-6" /> : 
                  activeChat.type === 'plot_generator' ? <Sparkles className="text-violet-500 w-6 h-6" /> : 
                  activeChat.type === 'group' ? <Users className="text-violet-500 w-6 h-6" /> : 
-                 renderAvatar(activeChat.avatarBase64)}
+                 renderAvatar(activeChat.type === 'single' && activeChat.characterIds?.length > 0 ? (characters.find(c => c.id === activeChat.characterIds[0])?.avatarBase64 || activeChat.avatarBase64) : activeChat.avatarBase64)}
               </div>
               <div className="flex-1 overflow-hidden mr-2">
-                <h1 className="font-semibold text-slate-800 text-lg leading-tight truncate">{activeChat.name}</h1>
+                <h1 className="font-semibold text-slate-800 text-lg leading-tight truncate">
+                  {activeChat.type === 'single' && activeChat.characterIds?.length > 0 
+                    ? (characters.find(c => c.id === activeChat.characterIds[0])?.name || activeChat.name) 
+                    : activeChat.name}
+                </h1>
                 <p className="text-xs text-slate-800/70 truncate flex items-center gap-2">
                   <span>{activeChat.type === 'group' ? `${activeChat.characterIds.length} персонажей` : (activeChat.type === 'generator' ? 'Генерация персонажа' : (activeChat.type === 'plot_generator' ? 'Генерация сюжета' : 'Online'))}</span>
                   {balance !== null && <span className="text-green-600 font-medium">${typeof balance === 'number' ? balance.toFixed(2) : balance}</span>}

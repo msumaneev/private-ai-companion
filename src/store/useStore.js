@@ -75,6 +75,15 @@ export const useStore = create(
           characters: state.characters.map((c) =>
             c.id === id ? { ...c, ...updates } : c
           ),
+          chats: state.chats.map((c) => 
+            c.type === 'single' && c.characterIds && c.characterIds[0] === id
+              ? { 
+                  ...c, 
+                  name: updates.name !== undefined ? updates.name : c.name,
+                  avatarBase64: updates.avatarBase64 !== undefined ? updates.avatarBase64 : c.avatarBase64
+                }
+              : c
+          )
         }));
       },
 
