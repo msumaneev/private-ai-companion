@@ -92,8 +92,9 @@ function App() {
                     const metadata = await decryptMessage(encryptedMetadata, key);
                     
                     if (metadata.syncMode === true) {
-                        clientIdRef.current = metadata.hostClientId;
                         syncFullChat(metadata);
+                        // networkRoomId и networkKey уже установлены выше (строки 81, 83)
+                        // clientIdRef остаётся уникальным для каждого устройства
                         window.history.replaceState(null, null, ' ');
                         return; // Пропускаем окно Lobby
                     }

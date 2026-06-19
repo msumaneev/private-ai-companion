@@ -48,17 +48,20 @@ export function subscribeToRoom(roomId, onMessageCallback) {
     // Подписываемся на обновления
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const messages = [];
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            // Возвращаем в коллбек нужные данные
-            messages.push({
-                id: doc.id,
-                encryptedText: data.encryptedText,
-                timestamp: data.timestamp
-            });
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added') {
+                const data = change.doc.data();
+                messages.push({
+                    id: change.doc.id,
+                    encryptedText: data.encryptedText,
+                    timestamp: data.timestamp
+                });
+            }
         });
         
-        onMessageCallback(messages);
+        if (messages.length > 0) {
+            onMessageCallback(messages);
+        }
     }, (error) => {
         console.error("Ошибка при подписке на комнату:", error);
     });
