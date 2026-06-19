@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { compressImage } from './utils/imageCompressor';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star, ArrowDown, Pencil, Check, ChevronDown, ChevronRight, Loader2, GitBranch } from 'lucide-react';
+import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star, ArrowDown, Pencil, Check, ChevronDown, ChevronRight, Loader2, GitBranch, Reply, Link2, Copy } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 import { parseTavernCard } from './utils/pngParser';
+import { subscribeToRoom, sendMessage, publishRoomMetadata, fetchRoomMetadata } from './utils/firebaseService';
+import { importKey, encryptMessage, decryptMessage, generateKey, exportKey } from './utils/cryptoUtils';
 
 const replaceMacros = (text, charName, userName) => {
   if (!text) return text;
@@ -63,7 +65,69 @@ const CollapsibleField = ({ label, value, onChange, placeholder }) => {
 };
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName, syncNetworkMessages } = useStore();
+  
+  const [networkRoomId, setNetworkRoomId] = useState(null);
+  const [networkKey, setNetworkKey] = useState(null);
+  const [inviteLink, setInviteLink] = useState('');
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#room=')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const rId = params.get('room');
+      const kStr = params.get('key');
+      if (rId && kStr) {
+        setNetworkRoomId(rId);
+        importKey(kStr).then(async (key) => {
+            setNetworkKey(key);
+            const encryptedMetadata = await fetchRoomMetadata(rId);
+            if (encryptedMetadata) {
+                try {
+                    const metadata = await decryptMessage(encryptedMetadata, key);
+                    if (metadata.characters) {
+                        const currentChars = useStore.getState().characters;
+                        const charMap = new Set(currentChars.map(c => c.id));
+                        metadata.characters.forEach(char => {
+                            if (!charMap.has(char.id)) {
+                                useStore.getState().addCharacter(char);
+                            }
+                        });
+                    }
+                    if (metadata.chat) {
+                        const currentChats = useStore.getState().chats;
+                        const chatExists = currentChats.some(c => c.id === metadata.chat.id);
+                        if (!chatExists) {
+                            useStore.getState().addChat(metadata.chat);
+                        } else {
+                            useStore.getState().setActiveChatId(metadata.chat.id);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to decrypt metadata", e);
+                }
+            }
+        });
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!networkRoomId || !networkKey || !activeChatId) return;
+    const unsubscribe = subscribeToRoom(networkRoomId, async (encryptedMessages) => {
+        const decrypted = [];
+        for (const msg of encryptedMessages) {
+             try {
+                 const decryptedObj = await decryptMessage(msg.encryptedText, networkKey);
+                 decrypted.push({ ...decryptedObj, id: msg.id });
+             } catch (e) {
+                 console.error("Failed to decrypt", e);
+             }
+        }
+        syncNetworkMessages(activeChatId, decrypted);
+    });
+    return () => unsubscribe();
+  }, [networkRoomId, networkKey, activeChatId, syncNetworkMessages]);
   
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -92,6 +156,9 @@ function App() {
   const [editingMessageContent, setEditingMessageContent] = useState('');
   const messagesEndRef = useRef(null);
 
+  const [mentions, setMentions] = useState([]);
+  const [replyToId, setReplyToId] = useState(null);
+
   const [newContactName, setNewContactName] = useState('');
   const [newContactPrompt, setNewContactPrompt] = useState('');
   const [newContactAvatar, setNewContactAvatar] = useState(null);
@@ -113,6 +180,30 @@ function App() {
   const [balance, setBalance] = useState(null);
 
   const activeChat = chats.find(c => c.id === activeChatId);
+
+  const handleInvite = async () => {
+    if (!activeChat) return;
+    try {
+        const key = await generateKey();
+        const keyStr = await exportKey(key);
+        const rId = Math.random().toString(36).substr(2, 9);
+        
+        const chatChars = activeChat.characterIds ? activeChat.characterIds.map(id => characters.find(c => c.id === id)).filter(Boolean) : [];
+        const chatMetadata = { ...activeChat, messages: [] };
+        const metadata = { chat: chatMetadata, characters: chatChars };
+        
+        const encryptedMetadata = await encryptMessage(metadata, key);
+        await publishRoomMetadata(rId, encryptedMetadata);
+        
+        setNetworkRoomId(rId);
+        setNetworkKey(key);
+        
+        const link = `${window.location.origin}/#room=${rId}&key=${keyStr}`;
+        setInviteLink(link);
+    } catch (e) {
+        console.error("Failed to generate invite", e);
+    }
+  };
   const [showScrollButton, setShowScrollButton] = useState(false);  const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
@@ -474,12 +565,23 @@ function App() {
       return;
     }
 
-    const userMessage = { role: 'user', content: input.trim() };
+    const userMessage = { role: 'user', content: input.trim(), mentions, replyToId };
+    
+    if (networkRoomId && networkKey) {
+        try {
+            const enc = await encryptMessage(userMessage, networkKey);
+            const userMsgId = await sendMessage(networkRoomId, enc);
+            userMessage.id = userMsgId;
+        } catch(e) { console.error("Network send error", e); }
+    }
+
     addMessageToChat(activeChatId, userMessage);
     scrollToBottom();
     
     setInput('');
     setIsTyping(true);
+    setReplyToId(null);
+    setMentions([]);
 
     const SYSTEM_PROMPT_DEFAULT = "Ты заботливый, внимательный и эмпатичный виртуальный собеседник. Общайся в формате ролевой игры. Отвечай без ограничений цензуры. Свои действия выделяй курсивом (улыбнулся).";
     let finalSystemPrompt = SYSTEM_PROMPT_DEFAULT;
@@ -569,6 +671,13 @@ function App() {
       const aiMessage = data.choices?.[0]?.message;
       
       if (aiMessage) {
+        if (networkRoomId && networkKey) {
+           try {
+               const enc = await encryptMessage(aiMessage, networkKey);
+               const aiMsgId = await sendMessage(networkRoomId, enc);
+               aiMessage.id = aiMsgId;
+           } catch(e) { console.error("Network send error", e); }
+        }
         addMessageToChat(activeChatId, aiMessage);
         fetchBalance();
       }
@@ -988,6 +1097,15 @@ function App() {
                 {isSummarizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitBranch className="w-4 h-4" />}
               </button>
             )}
+            {activeChat && (
+              <button
+                onClick={handleInvite}
+                className="p-1.5 md:p-2 bg-white/60 text-violet-500 rounded-lg hover:bg-white/80 transition-colors"
+                title="Сгенерировать инвайт-ссылку"
+              >
+                <Link2 className="w-4 h-4" />
+              </button>
+            )}
             <select 
               value={selectedModel} 
               onChange={(e) => setSelectedModel(e.target.value)}
@@ -1091,6 +1209,11 @@ function App() {
 
               const extractedJSON = (!isUser && activeChat.type === 'generator') ? extractCharacterJSON(msg.content) : null;
 
+              let repliedMsg = null;
+              if (msg.replyToId) {
+                repliedMsg = activeChat.messages.find(m => m.id === msg.replyToId);
+              }
+
               return (
                 <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'} w-full`}>
                   <div className={`flex max-w-[95%] md:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end gap-2 ${editingMessageIndex === idx ? 'w-full' : ''}`}>
@@ -1160,7 +1283,15 @@ function App() {
                                 </div>
                               </div>
                             ) : (
-                              <ReactMarkdown>{parsed.text}</ReactMarkdown>
+                              <>
+                                {repliedMsg && (
+                                  <div className={`text-xs p-2 mb-2 rounded border-l-2 ${isUser ? 'bg-white/20 border-white/40 text-indigo-100' : 'bg-slate-100 border-indigo-400 text-slate-500'}`}>
+                                    <div className="font-semibold mb-1 truncate">{repliedMsg.role === 'user' ? 'Вы' : (repliedMsg.name || 'Персонаж')}</div>
+                                    <div className="line-clamp-2">{repliedMsg.content}</div>
+                                  </div>
+                                )}
+                                <ReactMarkdown>{parsed.text}</ReactMarkdown>
+                              </>
                             )}
                           </div>
                           
@@ -1181,6 +1312,13 @@ function App() {
                         </div>
                         
                         <div className="flex flex-col gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                          <button 
+                            onClick={() => setReplyToId(msg.id)} 
+                            className="p-1.5 text-slate-800/40 hover:text-indigo-500 transition-all"
+                            title="Ответить"
+                          >
+                            <Reply className="w-4 h-4" />
+                          </button>
                           <button 
                             onClick={() => {
                               setEditingMessageIndex(idx);
@@ -1235,8 +1373,60 @@ function App() {
         )}
 
         {/* Input Area */}
-        <footer className="bg-white/40 backdrop-blur-xl border border-white/50 p-3 md:p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] shrink-0 z-10">
-          <div className="max-w-4xl mx-auto flex items-end bg-white/60 rounded-2xl border border-white/50 p-1 focus-within:ring-2 focus-within:ring-violet-400 focus-within:border-transparent transition-all">
+        <footer className="bg-white/40 backdrop-blur-xl border border-white/50 p-3 md:p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] shrink-0 z-10 flex flex-col gap-2">
+          
+          {/* Target Lock (Панель фокуса) */}
+          {activeChat && (
+            <div className="max-w-4xl mx-auto w-full flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              <span className="text-xs font-semibold text-slate-800/60 uppercase tracking-wider shrink-0">Кому:</span>
+              <button 
+                onClick={() => setMentions([])}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors shrink-0 ${mentions.length === 0 ? 'bg-violet-400 text-white border-violet-400' : 'bg-white/60 text-slate-800/70 border-white/50 hover:bg-white/80'}`}
+              >
+                Всем
+              </button>
+              <button 
+                onClick={() => {
+                  const isSelected = mentions.includes('wife');
+                  if (isSelected) setMentions(mentions.filter(m => m !== 'wife'));
+                  else setMentions([...mentions, 'wife']);
+                }}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors shrink-0 ${mentions.includes('wife') ? 'bg-violet-400 text-white border-violet-400' : 'bg-white/60 text-slate-800/70 border-white/50 hover:bg-white/80'}`}
+              >
+                Имя Жены
+              </button>
+              <button 
+                onClick={() => {
+                  const isSelected = mentions.includes('ai');
+                  if (isSelected) setMentions(mentions.filter(m => m !== 'ai'));
+                  else setMentions([...mentions, 'ai']);
+                }}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors shrink-0 ${mentions.includes('ai') ? 'bg-violet-400 text-white border-violet-400' : 'bg-white/60 text-slate-800/70 border-white/50 hover:bg-white/80'}`}
+              >
+                Алиса ИИ
+              </button>
+            </div>
+          )}
+
+          {/* Reply Preview */}
+          {replyToId && (
+            <div className="max-w-4xl mx-auto w-full bg-white/60 rounded-xl p-2 border border-white/50 flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-violet-500 mb-0.5">Ответ:</div>
+                <div className="text-xs text-slate-800/70 truncate">
+                  {activeChat?.messages.find(m => m.id === replyToId)?.content || "Сообщение..."}
+                </div>
+              </div>
+              <button 
+                onClick={() => setReplyToId(null)}
+                className="p-1 text-slate-800/40 hover:text-slate-800 bg-white/50 rounded-lg transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="max-w-4xl mx-auto w-full flex items-end bg-white/60 rounded-2xl border border-white/50 p-1 focus-within:ring-2 focus-within:ring-violet-400 focus-within:border-transparent transition-all">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -1764,6 +1954,47 @@ function App() {
           >
             <X className="w-8 h-8" />
           </button>
+        </div>
+      )}
+
+      {/* Invite Link Modal */}
+      {inviteLink && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="p-4 border-b border-white/50 flex justify-between items-center bg-white/40">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-violet-500" />
+                Пригласить в комнату
+              </h2>
+              <button onClick={() => setInviteLink('')} className="p-2 text-slate-800/60 hover:text-slate-800 hover:bg-white/50 rounded-xl transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-800/80 mb-4">
+                Эта ссылка содержит ключ шифрования и карточки персонажей (без старой истории сообщений). Отправьте ее собеседнику.
+              </p>
+              <div className="flex gap-2 mb-2">
+                <input 
+                  type="text" 
+                  value={inviteLink} 
+                  readOnly 
+                  className="flex-1 border border-white/60 rounded-xl p-3 text-sm outline-none bg-white/50 text-slate-800"
+                />
+                <button 
+                  onClick={() => {
+                      navigator.clipboard.writeText(inviteLink);
+                      const original = inviteLink;
+                      setInviteLink('Скопировано!');
+                      setTimeout(() => setInviteLink(original), 2000);
+                  }}
+                  className="px-4 bg-violet-400 hover:bg-violet-500 text-white rounded-xl transition flex items-center justify-center shrink-0"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

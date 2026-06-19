@@ -33,6 +33,7 @@ export const useStore = create(
     (set, get) => ({
       characters: [],
       chats: [],
+      roomKeys: {},
       activeChatId: null,
       apiKey: '',
       autoTranslate: true,
@@ -52,6 +53,9 @@ export const useStore = create(
       setApiKey: (key) => set({ apiKey: key }),
       setUserName: (name) => set({ userName: name }),
       setActiveChatId: (id) => set({ activeChatId: id }),
+      setRoomKey: (roomId, key) => set((state) => ({
+        roomKeys: { ...state.roomKeys, [roomId]: key }
+      })),
 
       addCharacter: (character) => {
         const newChar = { 
@@ -69,6 +73,22 @@ export const useStore = create(
         set((state) => ({ characters: [...state.characters, newChar] }));
         return newChar;
       },
+
+      syncNetworkMessages: (chatId, newMessages) => set((state) => {
+        const chat = state.chats.find(c => c.id === chatId);
+        if (!chat) return state;
+        
+        const existingIds = new Set(chat.messages.map(m => m.id));
+        const toAdd = newMessages.filter(m => !existingIds.has(m.id));
+        
+        if (toAdd.length === 0) return state;
+        
+        return {
+          chats: state.chats.map(c => 
+            c.id === chatId ? { ...c, messages: [...c.messages, ...toAdd] } : c
+          )
+        };
+      }),
 
       updateCharacter: (id, updates) => {
         set((state) => ({
@@ -108,9 +128,9 @@ export const useStore = create(
       addChat: (chat) => {
         const newChat = { 
           ...chat, 
-          id: generateId(), 
+          id: chat.id || generateId(), 
           messages: chat.messages || [],
-          createdAt: Date.now(),
+          createdAt: chat.createdAt || Date.now(),
           parentId: chat.parentId || null,
           summary: chat.summary || ''
         };
@@ -119,9 +139,17 @@ export const useStore = create(
       },
 
       addMessageToChat: (chatId, message) => {
+        const enrichedMessage = {
+          id: message.id || generateId(),
+          timestamp: message.timestamp || Date.now(),
+          replyToId: message.replyToId || null,
+          mentions: message.mentions || [],
+          senderId: message.senderId || (message.role === 'user' ? 'user_local' : 'ai_local'),
+          ...message
+        };
         set((state) => ({
           chats: state.chats.map((chat) =>
-            chat.id === chatId ? { ...chat, messages: [...chat.messages, message] } : chat
+            chat.id === chatId ? { ...chat, messages: [...chat.messages, enrichedMessage] } : chat
           ),
         }));
       },
@@ -199,6 +227,9 @@ export const useStore = create(
     {
       name: 'private-ai-companion-storage',
       storage: createJSONStorage(() => idbStorage),
+      partialize: (state) => Object.fromEntries(
+        Object.entries(state).filter(([key]) => !['roomKeys'].includes(key))
+      ),
     }
   )
 );
