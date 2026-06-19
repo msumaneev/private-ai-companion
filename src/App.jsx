@@ -1049,10 +1049,9 @@ function App() {
           characterIds: activeChat.characterIds,
           avatarBase64: activeChat.avatarBase64,
           parentId: activeChat.id,
-          summary: summaryText
+          summary: summaryText,
+          networkUsers: activeChat.networkUsers || []
         });
-        
-        setActiveChatId(newChat.id);
 
         if (networkRoomId && networkKey) {
           try {
@@ -1065,6 +1064,7 @@ function App() {
             const encryptedMetadata = await encryptMessage(metadata, newKey);
             await publishRoomMetadata(newRId, encryptedMetadata);
             
+            // Set room key first so it's ready when we switch
             setRoomKey(newChat.id, { rId: newRId, kStr: newKeyStr });
             
             const eventPayload = {
@@ -1082,6 +1082,8 @@ function App() {
             console.error("Failed to broadcast new chapter", e);
           }
         }
+        
+        setActiveChatId(newChat.id);
       }
     } catch (error) {
       console.error('Summarization failed:', error);
