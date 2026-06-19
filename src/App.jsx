@@ -265,12 +265,18 @@ function App() {
   };
 
   const handleInvite = async (mode = 'multiplayer') => {
-    if (!activeChat) return;
+    console.log("handleInvite started with mode:", mode);
+    if (!activeChat) {
+        console.log("No active chat, returning");
+        return;
+    }
     try {
+        console.log("Generating key...");
         const key = await generateKey();
         const keyStr = await exportKey(key);
         const rId = Math.random().toString(36).substr(2, 9);
         
+        console.log("Preparing metadata...");
         const chatChars = activeChat.characterIds ? activeChat.characterIds.map(id => characters.find(c => c.id === id)).filter(Boolean) : [];
         
         let chatMetadata;
@@ -283,7 +289,9 @@ function App() {
             metadata = { chat: chatMetadata, characters: chatChars };
         }
         
+        console.log("Encrypting metadata...");
         const encryptedMetadata = await encryptMessage(metadata, key);
+        console.log("Publishing to Firebase, size:", encryptedMetadata.length);
         await publishRoomMetadata(rId, encryptedMetadata);
         
         setNetworkRoomId(rId);
