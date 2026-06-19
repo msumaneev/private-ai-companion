@@ -100,7 +100,7 @@ export async function publishRoomMetadata(roomId, encryptedMetadata) {
 
         for (let i = 0; i < totalChunks; i++) {
             const chunkStr = encryptedMetadata.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-            const chunkRef = doc(db, 'rooms', roomId, 'chunks', i.toString());
+            const chunkRef = doc(db, 'rooms', `${roomId}_chunk_${i}`);
             await setDoc(chunkRef, { index: i, data: chunkStr });
         }
     } catch (error) {
@@ -114,7 +114,7 @@ export async function publishRoomMetadata(roomId, encryptedMetadata) {
  */
 export async function fetchRoomMetadata(roomId) {
     if (!roomId) throw new Error("roomId обязателен");
-    const { doc, getDoc, collection, getDocs, query, orderBy } = await import('firebase/firestore');
+    const { doc, getDoc } = await import('firebase/firestore');
     
     try {
         const roomRef = doc(db, 'rooms', roomId);
@@ -126,14 +126,14 @@ export async function fetchRoomMetadata(roomId) {
                 return data.metadata; // Обратная совместимость
             }
             if (data.chunksCount) {
-                const chunksRef = collection(db, 'rooms', roomId, 'chunks');
-                const q = query(chunksRef, orderBy('index', 'asc'));
-                const querySnapshot = await getDocs(q);
-                
                 let fullMetadata = '';
-                querySnapshot.forEach((chunkDoc) => {
-                    fullMetadata += chunkDoc.data().data;
-                });
+                for (let i = 0; i < data.chunksCount; i++) {
+                    const chunkRef = doc(db, 'rooms', `${roomId}_chunk_${i}`);
+                    const chunkSnap = await getDoc(chunkRef);
+                    if (chunkSnap.exists()) {
+                        fullMetadata += chunkSnap.data().data;
+                    }
+                }
                 return fullMetadata;
             }
         }
