@@ -82,18 +82,18 @@ function App() {
         importKey(kStr).then(async (key) => {
             setNetworkKey(key);
             const encryptedMetadata = await fetchRoomMetadata(rId);
+            if (encryptedMetadata?.expired) {
+                alert('Срок действия ссылки истёк (72 часа). Попросите отправителя создать новую.');
+                window.history.replaceState(null, null, ' ');
+                return;
+            }
             if (encryptedMetadata) {
                 try {
                     const metadata = await decryptMessage(encryptedMetadata, key);
                     
                     if (metadata.syncMode === true) {
-                        console.log("SYNC MODE detected!");
-                        console.log("metadata.chat:", metadata.chat?.id, metadata.chat?.name);
-                        console.log("metadata.characters count:", metadata.characters?.length);
-                        console.log("metadata.chat.messages count:", metadata.chat?.messages?.length);
                         clientIdRef.current = metadata.hostClientId;
                         syncFullChat(metadata);
-                        console.log("syncFullChat called. Current chats:", useStore.getState().chats.map(c => c.id + ':' + c.name));
                         window.history.replaceState(null, null, ' ');
                         return; // Пропускаем окно Lobby
                     }
@@ -270,18 +270,12 @@ function App() {
   };
 
   const handleInvite = async (mode = 'multiplayer') => {
-    console.log("handleInvite started with mode:", mode);
-    if (!activeChat) {
-        console.log("No active chat, returning");
-        return;
-    }
+    if (!activeChat) return;
     try {
-        console.log("Generating key...");
         const key = await generateKey();
         const keyStr = await exportKey(key);
         const rId = Math.random().toString(36).substr(2, 9);
         
-        console.log("Preparing metadata...");
         const chatChars = activeChat.characterIds ? activeChat.characterIds.map(id => characters.find(c => c.id === id)).filter(Boolean) : [];
         
         let chatMetadata;
@@ -294,9 +288,7 @@ function App() {
             metadata = { chat: chatMetadata, characters: chatChars };
         }
         
-        console.log("Encrypting metadata...");
         const encryptedMetadata = await encryptMessage(metadata, key);
-        console.log("Publishing to Firebase, size:", encryptedMetadata.length);
         await publishRoomMetadata(rId, encryptedMetadata);
         
         setNetworkRoomId(rId);

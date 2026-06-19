@@ -86,31 +86,25 @@ export async function sendMessage(roomId, encryptedText) {
 
 export async function publishRoomMetadata(roomId, encryptedMetadata) {
     if (!roomId || !encryptedMetadata) throw new Error("roomId и encryptedMetadata обязательны");
-    console.log("Dynamically importing firestore modules...");
-    const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+    const { doc, setDoc, serverTimestamp, Timestamp } = await import('firebase/firestore');
     
     try {
         const CHUNK_SIZE = 800000;
         const totalChunks = Math.ceil(encryptedMetadata.length / CHUNK_SIZE);
-        console.log(`Calculated totalChunks: ${totalChunks}`);
+        const expiresAt = Timestamp.fromDate(new Date(Date.now() + 72 * 60 * 60 * 1000)); // 72 часа
 
-        console.log("Getting roomRef...");
         const roomRef = doc(db, 'rooms', roomId);
-        console.log("Calling setDoc for roomRef...");
         await setDoc(roomRef, {
             chunksCount: totalChunks,
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
+            expiresAt
         }, { merge: true });
-        console.log("setDoc for roomRef completed.");
 
         for (let i = 0; i < totalChunks; i++) {
-            console.log(`Writing chunk ${i}...`);
             const chunkStr = encryptedMetadata.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
             const chunkRef = doc(db, 'rooms', `${roomId}_chunk_${i}`);
-            await setDoc(chunkRef, { index: i, data: chunkStr });
-            console.log(`Chunk ${i} written.`);
+            await setDoc(chunkRef, { index: i, data: chunkStr, expiresAt });
         }
-        console.log("publishRoomMetadata fully completed.");
     } catch (error) {
         console.error("Ошибка при сохранении метаданных:", error);
         throw error;
@@ -130,6 +124,13 @@ export async function fetchRoomMetadata(roomId) {
         
         if (docSnap.exists()) {
             const data = docSnap.data();
+            
+            // Проверяем срок действия ссылки
+            if (data.expiresAt && data.expiresAt.toDate() < new Date()) {
+                console.warn("Ссылка просрочена:", roomId);
+                return { expired: true };
+            }
+            
             if (data.metadata) {
                 return data.metadata; // Обратная совместимость
             }
