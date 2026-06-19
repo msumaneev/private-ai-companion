@@ -76,7 +76,7 @@ function App() {
     if (hash.startsWith('#room=')) {
       const params = new URLSearchParams(hash.substring(1));
       const rId = params.get('room');
-      const kStr = params.get('key');
+      const kStr = params.get('key')?.replace(/ /g, '+');
       if (rId && kStr) {
         setNetworkRoomId(rId);
         importKey(kStr).then(async (key) => {
@@ -302,7 +302,7 @@ function App() {
         setNetworkRoomId(rId);
         setNetworkKey(key);
         
-        const link = `${window.location.origin}${window.location.pathname}#room=${rId}&key=${keyStr}`;
+        const link = `${window.location.origin}${window.location.pathname}#room=${rId}&key=${encodeURIComponent(keyStr)}`;
         setInviteLink(link);
     } catch (e) {
         console.error("Failed to generate invite", e);
