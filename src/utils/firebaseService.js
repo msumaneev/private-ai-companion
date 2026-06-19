@@ -12,13 +12,17 @@ import {
 } from 'firebase/firestore';
 
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCc-VApuGFu4QcPdYEnbzmOhDI5zJPJQTk",
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "private-ai-companion-59d6f.firebaseapp.com",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "private-ai-companion-59d6f",
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "private-ai-companion-59d6f.firebasestorage.app",
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "828842217718",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:828842217718:web:8849a83a57d42f25f31cd7"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
+
+if (!firebaseConfig.apiKey) {
+    console.warn("⚠️ Firebase config is missing! Set VITE_FIREBASE_* env variables. See docs/FIREBASE_SETUP.md");
+}
 
 // Инициализация приложения и базы данных. 
 // Пока нет ключей, эти строки могут бросить ошибку при реальном импорте и запуске,
