@@ -211,6 +211,18 @@ function App() {
                          // Пропускаем свои же сообщения — они уже добавлены локально
                          if (payload.senderId && payload.senderId === clientIdRef.current) continue;
                          decryptedMessages.push({ ...payload, id: change.data.id });
+                     } else if (eventType === 'EDIT_MESSAGE') {
+                         if (payload.senderId && payload.senderId === clientIdRef.current) continue;
+                         const msgIndex = currentChat.messages.findIndex(m => m.id === payload.messageId);
+                         if (msgIndex !== -1) {
+                             store.editMessageInChat(activeChatId, msgIndex, payload.newContent);
+                         }
+                     } else if (eventType === 'DELETE_MESSAGE') {
+                         if (payload.senderId && payload.senderId === clientIdRef.current) continue;
+                         const msgIndex = currentChat.messages.findIndex(m => m.id === payload.messageId);
+                         if (msgIndex !== -1) {
+                             store.deleteMessageFromChat(activeChatId, msgIndex);
+                         }
                      }
                  } else if (change.type === 'modified') {
                      if (eventType === 'MESSAGE') {
@@ -862,10 +874,13 @@ function App() {
 
     if (networkRoomId && networkKey && msgToEdit.id) {
         try {
-            const updatedMsg = { ...msgToEdit, content: newContent };
-            const enc = await encryptMessage({ type: 'MESSAGE', payload: updatedMsg }, networkKey);
-            await updateMessage(networkRoomId, msgToEdit.id, enc);
-        } catch(e) { console.error("Failed to update network message", e); }
+            const eventPayload = {
+                type: 'EDIT_MESSAGE',
+                payload: { messageId: msgToEdit.id, newContent, senderId: clientIdRef.current }
+            };
+            const enc = await encryptMessage(eventPayload, networkKey);
+            await sendMessage(networkRoomId, enc);
+        } catch(e) { console.error("Failed to broadcast network message edit", e); }
     }
   };
 
@@ -878,8 +893,13 @@ function App() {
 
     if (networkRoomId && networkKey && msgToDelete.id) {
         try {
-            await deleteMessage(networkRoomId, msgToDelete.id);
-        } catch(e) { console.error("Failed to delete network message", e); }
+            const eventPayload = {
+                type: 'DELETE_MESSAGE',
+                payload: { messageId: msgToDelete.id, senderId: clientIdRef.current }
+            };
+            const enc = await encryptMessage(eventPayload, networkKey);
+            await sendMessage(networkRoomId, enc);
+        } catch(e) { console.error("Failed to broadcast network message deletion", e); }
     }
   };
 
