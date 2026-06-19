@@ -1033,7 +1033,7 @@ function App() {
                                     setSummaryModalText(chat.summary || "");
                                     setTempChatUserName(chat.userName || "");
                                   }}
-                                  className={`p-1 rounded opacity-0 group-hover/chat:opacity-100 transition-colors mr-1 ${chat.summary ? (activeChatId === chat.id ? 'text-white hover:bg-white/20' : 'text-amber-500 hover:bg-amber-500/20') : (activeChatId === chat.id ? 'text-white/80 hover:bg-white/20' : 'text-slate-400 hover:bg-slate-200')}`}
+                                  className={`p-1 rounded opacity-100 md:opacity-0 md:group-hover/chat:opacity-100 transition-colors mr-1 ${chat.summary ? (activeChatId === chat.id ? 'text-white hover:bg-white/20' : 'text-amber-500 hover:bg-amber-500/20') : (activeChatId === chat.id ? 'text-white/80 hover:bg-white/20' : 'text-slate-400 hover:bg-slate-200')}`}
                                   title="Память (Саммари) этой главы"
                                 >
                                   <BookOpen className="w-3.5 h-3.5" />
@@ -1043,7 +1043,7 @@ function App() {
                                     e.stopPropagation();
                                     if (window.confirm('Удалить эту главу?')) deleteChat(chat.id);
                                   }}
-                                  className={`p-1 rounded opacity-0 group-hover/chat:opacity-100 hover:bg-red-500/20 hover:text-red-500 transition-colors ${activeChatId === chat.id ? 'text-white/80' : 'text-slate-400'}`}
+                                  className={`p-1 rounded opacity-100 md:opacity-0 md:group-hover/chat:opacity-100 hover:bg-red-500/20 hover:text-red-500 transition-colors ${activeChatId === chat.id ? 'text-white/80' : 'text-slate-400'}`}
                                   title="Удалить главу"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
