@@ -34,6 +34,17 @@ npm install
 npm run dev
 ```
 
+## Forking & Firebase Setup
+
+If you want to deploy your own instance of this app, you'll need to create your own Firebase project for the multiplayer and device sync features.
+
+👉 **[Full Firebase Setup Guide](docs/FIREBASE_SETUP.md)** — step-by-step instructions covering:
+- Creating a Firebase project & Firestore database
+- Configuring security rules
+- Setting up automatic data cleanup (TTL)
+- Connecting Firebase to your fork
+- Deploying to GitHub Pages
+
 ## Technologies Used
 - **Frontend Framework**: React 19 + Vite
 - **Styling**: Tailwind CSS v4 + Lucide Icons
