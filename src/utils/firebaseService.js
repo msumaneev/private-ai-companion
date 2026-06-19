@@ -8,7 +8,10 @@ import {
     onSnapshot, 
     query, 
     orderBy, 
-    serverTimestamp 
+    serverTimestamp,
+    doc,
+    updateDoc,
+    deleteDoc
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -47,20 +50,30 @@ export function subscribeToRoom(roomId, onMessageCallback) {
 
     // Подписываемся на обновления
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messages = [];
+        const changes = [];
         snapshot.docChanges().forEach((change) => {
-            if (change.type === 'added') {
+            if (change.type === 'added' || change.type === 'modified') {
                 const data = change.doc.data();
-                messages.push({
-                    id: change.doc.id,
-                    encryptedText: data.encryptedText,
-                    timestamp: data.timestamp
+                changes.push({
+                    type: change.type,
+                    data: {
+                        id: change.doc.id,
+                        encryptedText: data.encryptedText,
+                        timestamp: data.timestamp
+                    }
+                });
+            } else if (change.type === 'removed') {
+                changes.push({
+                    type: change.type,
+                    data: {
+                        id: change.doc.id
+                    }
                 });
             }
         });
         
-        if (messages.length > 0) {
-            onMessageCallback(messages);
+        if (changes.length > 0) {
+            onMessageCallback(changes);
         }
     }, (error) => {
         console.error("Ошибка при подписке на комнату:", error);
@@ -87,6 +100,43 @@ export async function sendMessage(roomId, encryptedText) {
         return docRef.id;
     } catch (error) {
         console.error("Ошибка при отправке сообщения:", error);
+        throw error;
+    }
+}
+
+/**
+ * Обновляет зашифрованное сообщение в Firebase
+ * @param {string} roomId Идентификатор комнаты
+ * @param {string} messageId Идентификатор сообщения
+ * @param {string} encryptedText Новая зашифрованная строка
+ */
+export async function updateMessage(roomId, messageId, encryptedText) {
+    if (!roomId || !messageId || !encryptedText) throw new Error("roomId, messageId и encryptedText обязательны");
+    
+    try {
+        const messageRef = doc(db, 'rooms', roomId, 'messages', messageId);
+        await updateDoc(messageRef, {
+            encryptedText
+        });
+    } catch (error) {
+        console.error("Ошибка при обновлении сообщения:", error);
+        throw error;
+    }
+}
+
+/**
+ * Удаляет сообщение из Firebase
+ * @param {string} roomId Идентификатор комнаты
+ * @param {string} messageId Идентификатор сообщения
+ */
+export async function deleteMessage(roomId, messageId) {
+    if (!roomId || !messageId) throw new Error("roomId и messageId обязательны");
+    
+    try {
+        const messageRef = doc(db, 'rooms', roomId, 'messages', messageId);
+        await deleteDoc(messageRef);
+    } catch (error) {
+        console.error("Ошибка при удалении сообщения:", error);
         throw error;
     }
 }

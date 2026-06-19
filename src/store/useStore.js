@@ -284,10 +284,7 @@ export const useStore = create(
     }),
     {
       name: 'private-ai-companion-storage',
-      storage: createJSONStorage(() => idbStorage),
-      partialize: (state) => Object.fromEntries(
-        Object.entries(state).filter(([key]) => !['roomKeys'].includes(key))
-      ),
+      storage: createJSONStorage(() => idbStorage)
     }
   )
 );

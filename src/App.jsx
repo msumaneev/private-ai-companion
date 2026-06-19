@@ -6,7 +6,7 @@ import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpe
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 import { parseTavernCard } from './utils/pngParser';
-import { subscribeToRoom, sendMessage, publishRoomMetadata, fetchRoomMetadata } from './utils/firebaseService';
+import { subscribeToRoom, sendMessage, publishRoomMetadata, fetchRoomMetadata, updateMessage, deleteMessage } from './utils/firebaseService';
 import { importKey, encryptMessage, decryptMessage, generateKey, exportKey } from './utils/cryptoUtils';
 
 const replaceMacros = (text, charName, userName) => {
@@ -65,7 +65,7 @@ const CollapsibleField = ({ label, value, onChange, placeholder }) => {
 };
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName, userAvatar, userDescription, syncNetworkMessages, addCharacterToChat, syncFullChat } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName, userAvatar, userDescription, syncNetworkMessages, addCharacterToChat, syncFullChat, roomKeys } = useStore();
   
   const [networkRoomId, setNetworkRoomId] = useState(null);
   const [networkKey, setNetworkKey] = useState(null);
@@ -151,16 +151,38 @@ function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (activeChatId && roomKeys[activeChatId]) {
+      const { rId, kStr } = roomKeys[activeChatId];
+      if (rId !== networkRoomId) {
+        setNetworkRoomId(rId);
+        importKey(kStr).then(setNetworkKey).catch(console.error);
+      }
+    } else if (activeChatId && !roomKeys[activeChatId] && !window.location.hash.startsWith('#room=')) {
+      setNetworkRoomId(null);
+      setNetworkKey(null);
+    }
+  }, [activeChatId, roomKeys]);
+
+  useEffect(() => {
     if (!networkRoomId || !networkKey || !activeChatId) return;
-    const unsubscribe = subscribeToRoom(networkRoomId, async (encryptedMessages) => {
+    const unsubscribe = subscribeToRoom(networkRoomId, async (changes) => {
         const decryptedMessages = [];
-        const currentChat = useStore.getState().chats.find(c => c.id === activeChatId);
+        const store = useStore.getState();
+        const currentChat = store.chats.find(c => c.id === activeChatId);
         let networkUsers = currentChat?.networkUsers || [];
         let updatedNetworkUsers = false;
 
-        for (const msg of encryptedMessages) {
+        for (const change of changes) {
+             if (change.type === 'removed') {
+                 const msgIndex = currentChat.messages.findIndex(m => m.id === change.data.id);
+                 if (msgIndex !== -1) {
+                     store.deleteMessageFromChat(activeChatId, msgIndex);
+                 }
+                 continue;
+             }
+
              try {
-                 const decryptedObj = await decryptMessage(msg.encryptedText, networkKey);
+                 const decryptedObj = await decryptMessage(change.data.encryptedText, networkKey);
                  
                  let eventType = decryptedObj.type;
                  let payload = decryptedObj.payload;
@@ -171,23 +193,34 @@ function App() {
                      payload = decryptedObj;
                  }
 
-                 if (eventType === 'USER_JOINED') {
-                     const guest = decryptedObj.user;
-                     if (guest.id !== clientIdRef.current && !networkUsers.find(u => u.id === guest.id)) {
-                         networkUsers = [...networkUsers, guest];
-                         updatedNetworkUsers = true;
-                         
-                         decryptedMessages.push({
-                             id: msg.id,
-                             role: 'assistant',
-                             name: 'Система',
-                             content: `[Система]: Пользователь ${guest.name} присоединился к чату. Описание: ${guest.description || 'Нет описания'}`
-                         });
+                 if (change.type === 'added') {
+                     if (eventType === 'USER_JOINED') {
+                         const guest = decryptedObj.user;
+                         if (guest.id !== clientIdRef.current && !networkUsers.find(u => u.id === guest.id)) {
+                             networkUsers = [...networkUsers, guest];
+                             updatedNetworkUsers = true;
+                             
+                             decryptedMessages.push({
+                                 id: change.data.id,
+                                 role: 'assistant',
+                                 name: 'Система',
+                                 content: `[Система]: Пользователь ${guest.name} присоединился к чату. Описание: ${guest.description || 'Нет описания'}`
+                             });
+                         }
+                     } else if (eventType === 'MESSAGE') {
+                         // Пропускаем свои же сообщения — они уже добавлены локально
+                         if (payload.senderId && payload.senderId === clientIdRef.current) continue;
+                         decryptedMessages.push({ ...payload, id: change.data.id });
                      }
-                 } else if (eventType === 'MESSAGE') {
-                     // Пропускаем свои же сообщения — они уже добавлены локально
-                     if (payload.senderId && payload.senderId === clientIdRef.current) continue;
-                     decryptedMessages.push({ ...payload, id: msg.id });
+                 } else if (change.type === 'modified') {
+                     if (eventType === 'MESSAGE') {
+                         // Пропускаем обновления своих сообщений, мы сами их меняем
+                         if (payload.senderId && payload.senderId === clientIdRef.current) continue;
+                         const msgIndex = currentChat.messages.findIndex(m => m.id === change.data.id);
+                         if (msgIndex !== -1) {
+                             store.editMessageInChat(activeChatId, msgIndex, payload.content);
+                         }
+                     }
                  }
              } catch (e) {
                  console.error("Failed to decrypt", e);
@@ -195,7 +228,7 @@ function App() {
         }
         
         if (updatedNetworkUsers) {
-            useStore.getState().updateChatField(activeChatId, 'networkUsers', networkUsers);
+            store.updateChatField(activeChatId, 'networkUsers', networkUsers);
         }
         if (decryptedMessages.length > 0) {
             syncNetworkMessages(activeChatId, decryptedMessages);
@@ -817,6 +850,36 @@ function App() {
       addMessageToChat(activeChatId, { role: 'assistant', content: `_Ошибка: ${error.message}_` });
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  const handleEditMessage = async (idx, newContent) => {
+    if (!activeChat) return;
+    const msgToEdit = activeChat.messages[idx];
+    if (!msgToEdit) return;
+
+    editMessageInChat(activeChat.id, idx, newContent);
+
+    if (networkRoomId && networkKey && msgToEdit.id) {
+        try {
+            const updatedMsg = { ...msgToEdit, content: newContent };
+            const enc = await encryptMessage({ type: 'MESSAGE', payload: updatedMsg }, networkKey);
+            await updateMessage(networkRoomId, msgToEdit.id, enc);
+        } catch(e) { console.error("Failed to update network message", e); }
+    }
+  };
+
+  const handleDeleteMessage = async (idx) => {
+    if (!activeChat) return;
+    const msgToDelete = activeChat.messages[idx];
+    if (!msgToDelete) return;
+
+    deleteMessageFromChat(activeChat.id, idx);
+
+    if (networkRoomId && networkKey && msgToDelete.id) {
+        try {
+            await deleteMessage(networkRoomId, msgToDelete.id);
+        } catch(e) { console.error("Failed to delete network message", e); }
     }
   };
 
@@ -1476,7 +1539,7 @@ function App() {
                                   </button>
                                   <button 
                                     onClick={() => {
-                                      editMessageInChat(activeChat.id, idx, editingMessageContent);
+                                      handleEditMessage(idx, editingMessageContent);
                                       setEditingMessageIndex(null);
                                     }}
                                     className="px-3 py-1 rounded-lg text-xs font-medium bg-indigo-500 hover:bg-indigo-600 text-white flex items-center gap-1"
@@ -1533,7 +1596,7 @@ function App() {
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button 
-                            onClick={() => deleteMessageFromChat(activeChat.id, idx)} 
+                            onClick={() => handleDeleteMessage(idx)} 
                             className="p-1.5 text-slate-800/40 hover:text-red-500 transition-all"
                             title="Удалить сообщение"
                           >
