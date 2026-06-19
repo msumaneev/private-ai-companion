@@ -87,8 +87,13 @@ function App() {
                     const metadata = await decryptMessage(encryptedMetadata, key);
                     
                     if (metadata.syncMode === true) {
+                        console.log("SYNC MODE detected!");
+                        console.log("metadata.chat:", metadata.chat?.id, metadata.chat?.name);
+                        console.log("metadata.characters count:", metadata.characters?.length);
+                        console.log("metadata.chat.messages count:", metadata.chat?.messages?.length);
                         clientIdRef.current = metadata.hostClientId;
                         syncFullChat(metadata);
+                        console.log("syncFullChat called. Current chats:", useStore.getState().chats.map(c => c.id + ':' + c.name));
                         window.history.replaceState(null, null, ' ');
                         return; // Пропускаем окно Lobby
                     }
