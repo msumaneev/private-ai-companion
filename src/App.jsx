@@ -293,6 +293,7 @@ function App() {
         setInviteLink(link);
     } catch (e) {
         console.error("Failed to generate invite", e);
+        alert("Ошибка создания ссылки: " + e.message);
     }
   };
   const [showScrollButton, setShowScrollButton] = useState(false);  const handleScroll = (e) => {
