@@ -297,7 +297,7 @@ function App() {
         setNetworkRoomId(rId);
         setNetworkKey(key);
         
-        const link = `${window.location.origin}/#room=${rId}&key=${keyStr}`;
+        const link = `${window.location.origin}${window.location.pathname}#room=${rId}&key=${keyStr}`;
         setInviteLink(link);
     } catch (e) {
         console.error("Failed to generate invite", e);
