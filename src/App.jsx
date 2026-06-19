@@ -65,7 +65,7 @@ const CollapsibleField = ({ label, value, onChange, placeholder }) => {
 };
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName, userAvatar, userDescription, syncNetworkMessages, addCharacterToChat, syncFullChat, roomKeys } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName, userAvatar, userDescription, syncNetworkMessages, addCharacterToChat, syncFullChat, roomKeys, setRoomKey } = useStore();
   
   const [networkRoomId, setNetworkRoomId] = useState(null);
   const [networkKey, setNetworkKey] = useState(null);
@@ -129,6 +129,7 @@ function App() {
                                 setActiveTab('contacts');
                                 setExpandedCharacters(prev => ({...prev, [metadata.chat.characterIds[0]]: true}));
                             }
+                            useStore.getState().setRoomKey(metadata.chat.id, { rId, kStr });
                         }
                         openLobbyModal();
                     };
@@ -364,6 +365,7 @@ function App() {
         
         setNetworkRoomId(rId);
         setNetworkKey(key);
+        setRoomKey(activeChat.id, { rId, kStr: keyStr });
         
         const link = `${window.location.origin}${window.location.pathname}#room=${rId}&key=${encodeURIComponent(keyStr)}`;
         setInviteLink(link);
