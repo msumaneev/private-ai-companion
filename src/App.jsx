@@ -174,79 +174,113 @@ function App() {
         const currentChat = store.chats.find(c => c.id === activeChatId);
         let networkUsers = currentChat?.networkUsers || [];
         let updatedNetworkUsers = false;
+        const messageEvents = [];
+        const otherEvents = [];
 
         for (const change of changes) {
              if (change.type === 'removed') {
-                 const msgIndex = currentChat.messages.findIndex(m => m.id === change.data.id);
-                 if (msgIndex !== -1) {
-                     store.deleteMessageFromChat(activeChatId, msgIndex);
-                 }
+                 otherEvents.push({ type: 'REMOVED', data: change.data });
                  continue;
              }
-
              try {
                  const decryptedObj = await decryptMessage(change.data.encryptedText, networkKey);
-                 
                  let eventType = decryptedObj.type;
                  let payload = decryptedObj.payload;
-
-                 // Backward compatibility for old raw messages
                  if (!eventType) {
                      eventType = 'MESSAGE';
                      payload = decryptedObj;
                  }
-
                  if (change.type === 'added') {
-                     if (eventType === 'USER_JOINED') {
-                         const guest = decryptedObj.user;
-                         if (guest.id !== clientIdRef.current && !networkUsers.find(u => u.id === guest.id)) {
-                             networkUsers = [...networkUsers, guest];
-                             updatedNetworkUsers = true;
-                             
-                             decryptedMessages.push({
-                                 id: change.data.id,
-                                 role: 'assistant',
-                                 name: 'Система',
-                                 content: `[Система]: Пользователь ${guest.name} присоединился к чату. Описание: ${guest.description || 'Нет описания'}`
-                             });
-                         }
-                     } else if (eventType === 'MESSAGE') {
-                         // Пропускаем свои же сообщения — они уже добавлены локально
-                         if (payload.senderId && payload.senderId === clientIdRef.current) continue;
-                         decryptedMessages.push({ ...payload, id: change.data.id });
-                     } else if (eventType === 'EDIT_MESSAGE') {
-                         if (payload.senderId && payload.senderId === clientIdRef.current) continue;
-                         const msgIndex = currentChat.messages.findIndex(m => m.id === payload.messageId);
-                         if (msgIndex !== -1) {
-                             store.editMessageInChat(activeChatId, msgIndex, payload.newContent);
-                         }
-                     } else if (eventType === 'DELETE_MESSAGE') {
-                         if (payload.senderId && payload.senderId === clientIdRef.current) continue;
-                         const msgIndex = currentChat.messages.findIndex(m => m.id === payload.messageId);
-                         if (msgIndex !== -1) {
-                             store.deleteMessageFromChat(activeChatId, msgIndex);
-                         }
+                     if (eventType === 'MESSAGE') {
+                         messageEvents.push({ eventType, payload, id: change.data.id });
+                     } else {
+                         otherEvents.push({ type: 'ADDED_EVENT', eventType, payload, user: decryptedObj.user, id: change.data.id });
                      }
                  } else if (change.type === 'modified') {
                      if (eventType === 'MESSAGE') {
-                         // Пропускаем обновления своих сообщений, мы сами их меняем
-                         if (payload.senderId && payload.senderId === clientIdRef.current) continue;
-                         const msgIndex = currentChat.messages.findIndex(m => m.id === change.data.id);
-                         if (msgIndex !== -1) {
-                             store.editMessageInChat(activeChatId, msgIndex, payload.content);
-                         }
+                         otherEvents.push({ type: 'MODIFIED_MESSAGE', payload, id: change.data.id });
                      }
                  }
              } catch (e) {
                  console.error("Failed to decrypt", e);
              }
         }
+
+        for (const msgEvent of messageEvents) {
+             if (msgEvent.payload.senderId && msgEvent.payload.senderId === clientIdRef.current) continue;
+             decryptedMessages.push({ ...msgEvent.payload, id: msgEvent.id });
+        }
+        
+        if (decryptedMessages.length > 0) {
+            store.syncNetworkMessages(activeChatId, decryptedMessages);
+            setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+        // Pass 2: Process other events (Edits, Deletes, Joins) using FRESH state
+        const freshStore = useStore.getState();
+        const freshChat = freshStore.chats.find(c => c.id === activeChatId);
+        
+        for (const ev of otherEvents) {
+            if (ev.type === 'REMOVED') {
+                 const msgIndex = freshChat?.messages.findIndex(m => m.id === ev.data.id);
+                 if (msgIndex !== -1 && msgIndex !== undefined) {
+                     freshStore.deleteMessageFromChat(activeChatId, msgIndex);
+                 }
+            } else if (ev.type === 'ADDED_EVENT') {
+                 if (ev.eventType === 'USER_JOINED') {
+                     const guest = ev.user;
+                     if (guest.id !== clientIdRef.current) {
+                         const existingUser = networkUsers.find(u => u.id === guest.id);
+                         if (!existingUser) {
+                             networkUsers.push(guest);
+                             updatedNetworkUsers = true;
+                             // We append the system message locally. It won't be synced via network payload.
+                             freshStore.addMessageToChat(activeChatId, {
+                                 id: ev.id,
+                                 role: 'assistant',
+                                 name: 'Система',
+                                 content: `[Система]: Пользователь ${guest.name} присоединился к чату. Описание: ${guest.description || 'Нет описания'}`
+                             });
+                         }
+                     }
+                 } else if (ev.eventType === 'EDIT_MESSAGE') {
+                     if (ev.payload.senderId && ev.payload.senderId === clientIdRef.current) continue;
+                     const msgIndex = freshChat?.messages.findIndex(m => m.id === ev.payload.messageId);
+                     if (msgIndex !== -1 && msgIndex !== undefined) {
+                         freshStore.editMessageInChat(activeChatId, msgIndex, ev.payload.newContent);
+                     }
+                 } else if (ev.eventType === 'DELETE_MESSAGE') {
+                     if (ev.payload.senderId && ev.payload.senderId === clientIdRef.current) continue;
+                     const msgIndex = freshChat?.messages.findIndex(m => m.id === ev.payload.messageId);
+                     if (msgIndex !== -1 && msgIndex !== undefined) {
+                         freshStore.deleteMessageFromChat(activeChatId, msgIndex);
+                     }
+                 } else if (ev.eventType === 'NEW_CHAPTER') {
+                     if (ev.payload.senderId && ev.payload.senderId === clientIdRef.current) continue;
+                     
+                     const newChatData = ev.payload.chat;
+                     const newRId = ev.payload.rId;
+                     const newKStr = ev.payload.kStr;
+                     
+                     const exists = freshStore.chats.some(c => c.id === newChatData.id);
+                     if (!exists) {
+                         freshStore.addChat(newChatData);
+                     }
+                     freshStore.setRoomKey(newChatData.id, { rId: newRId, kStr: newKStr });
+                     freshStore.setActiveChatId(newChatData.id);
+                 }
+            } else if (ev.type === 'MODIFIED_MESSAGE') {
+                 if (ev.payload.senderId && ev.payload.senderId === clientIdRef.current) continue;
+                 const msgIndex = freshChat?.messages.findIndex(m => m.id === ev.id);
+                 if (msgIndex !== -1 && msgIndex !== undefined) {
+                     freshStore.editMessageInChat(activeChatId, msgIndex, ev.payload.content);
+                 }
+            }
+        }
         
         if (updatedNetworkUsers) {
-            store.updateChatField(activeChatId, 'networkUsers', networkUsers);
-        }
-        if (decryptedMessages.length > 0) {
-            syncNetworkMessages(activeChatId, decryptedMessages);
+            freshStore.updateChatField(activeChatId, 'networkUsers', networkUsers);
         }
     });
     return () => unsubscribe();
@@ -1019,6 +1053,35 @@ function App() {
         });
         
         setActiveChatId(newChat.id);
+
+        if (networkRoomId && networkKey) {
+          try {
+            const newKey = await generateKey();
+            const newKeyStr = await exportKey(newKey);
+            const newRId = Math.random().toString(36).substr(2, 9);
+            
+            const chatChars = newChat.characterIds ? newChat.characterIds.map(id => characters.find(c => c.id === id)).filter(Boolean) : [];
+            const metadata = { chat: newChat, characters: chatChars, syncMode: true };
+            const encryptedMetadata = await encryptMessage(metadata, newKey);
+            await publishRoomMetadata(newRId, encryptedMetadata);
+            
+            setRoomKey(newChat.id, { rId: newRId, kStr: newKeyStr });
+            
+            const eventPayload = {
+              type: 'NEW_CHAPTER',
+              payload: { 
+                chat: newChat,
+                rId: newRId,
+                kStr: newKeyStr,
+                senderId: clientIdRef.current 
+              }
+            };
+            const enc = await encryptMessage(eventPayload, networkKey);
+            await sendMessage(networkRoomId, enc);
+          } catch (e) {
+            console.error("Failed to broadcast new chapter", e);
+          }
+        }
       }
     } catch (error) {
       console.error('Summarization failed:', error);
