@@ -6,6 +6,12 @@ body {
   background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
   background-attachment: fixed;
   color: #334155; /* slate-700 */
+  overflow: hidden;
+}
+
+html, #root {
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Base custom styles for markdown */

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { compressImage } from './utils/imageCompressor';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star, ArrowDown, Pencil, Check, ChevronDown, ChevronRight, Loader2, GitBranch, Reply, Link2, Copy } from 'lucide-react';
+import { Send, User, Menu, X, Plus, Users, Image as ImageIcon, Sparkles, BookOpen, Bot, Settings, Trash2, Eraser, Star, ArrowDown, Pencil, Check, ChevronDown, ChevronRight, Loader2, GitBranch, Reply, Link2, Copy, MoreVertical, UserPlus } from 'lucide-react';
 import { useStore } from './store/useStore';
 import scenarios from './data/scenarios.json';
 import { parseTavernCard } from './utils/pngParser';
@@ -65,7 +65,7 @@ const CollapsibleField = ({ label, value, onChange, placeholder }) => {
 };
 
 function App() {
-  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName, syncNetworkMessages } = useStore();
+  const { characters, chats, activeChatId, apiKey, setApiKey, autoTranslate, setAutoTranslate, setActiveChatId, addCharacter, updateCharacter, importCharacter, addChat, addMessageToChat, clearChatMessages, deleteChat, deleteCharacter, favoriteModels, toggleFavoriteModel, selectedModel, setSelectedModel, deleteMessageFromChat, editMessageInChat, updateChatSummary, updateChatField, userName, setUserName, userAvatar, userDescription, syncNetworkMessages, addCharacterToChat, syncFullChat } = useStore();
   
   const [networkRoomId, setNetworkRoomId] = useState(null);
   const [networkKey, setNetworkKey] = useState(null);
@@ -85,6 +85,14 @@ function App() {
             if (encryptedMetadata) {
                 try {
                     const metadata = await decryptMessage(encryptedMetadata, key);
+                    
+                    if (metadata.syncMode === true) {
+                        clientIdRef.current = metadata.hostClientId;
+                        syncFullChat(metadata);
+                        window.history.replaceState(null, null, ' ');
+                        return; // Пропускаем окно Lobby
+                    }
+
                     if (metadata.characters) {
                         const currentChars = useStore.getState().characters;
                         const charMap = new Set(currentChars.map(c => c.id));
@@ -103,6 +111,7 @@ function App() {
                             useStore.getState().setActiveChatId(metadata.chat.id);
                         }
                     }
+                    openLobbyModal();
                 } catch (e) {
                     console.error("Failed to decrypt metadata", e);
                 }
@@ -115,16 +124,51 @@ function App() {
   useEffect(() => {
     if (!networkRoomId || !networkKey || !activeChatId) return;
     const unsubscribe = subscribeToRoom(networkRoomId, async (encryptedMessages) => {
-        const decrypted = [];
+        const decryptedMessages = [];
+        const currentChat = useStore.getState().chats.find(c => c.id === activeChatId);
+        let networkUsers = currentChat?.networkUsers || [];
+        let updatedNetworkUsers = false;
+
         for (const msg of encryptedMessages) {
              try {
                  const decryptedObj = await decryptMessage(msg.encryptedText, networkKey);
-                 decrypted.push({ ...decryptedObj, id: msg.id });
+                 
+                 let eventType = decryptedObj.type;
+                 let payload = decryptedObj.payload;
+
+                 // Backward compatibility for old raw messages
+                 if (!eventType) {
+                     eventType = 'MESSAGE';
+                     payload = decryptedObj;
+                 }
+
+                 if (eventType === 'USER_JOINED') {
+                     const guest = decryptedObj.user;
+                     if (guest.id !== clientIdRef.current && !networkUsers.find(u => u.id === guest.id)) {
+                         networkUsers = [...networkUsers, guest];
+                         updatedNetworkUsers = true;
+                         
+                         decryptedMessages.push({
+                             id: msg.id,
+                             role: 'assistant',
+                             name: 'Система',
+                             content: `[Система]: Пользователь ${guest.name} присоединился к чату. Описание: ${guest.description || 'Нет описания'}`
+                         });
+                     }
+                 } else if (eventType === 'MESSAGE') {
+                     decryptedMessages.push({ ...payload, id: msg.id });
+                 }
              } catch (e) {
                  console.error("Failed to decrypt", e);
              }
         }
-        syncNetworkMessages(activeChatId, decrypted);
+        
+        if (updatedNetworkUsers) {
+            useStore.getState().updateChatField(activeChatId, 'networkUsers', networkUsers);
+        }
+        if (decryptedMessages.length > 0) {
+            syncNetworkMessages(activeChatId, decryptedMessages);
+        }
     });
     return () => unsubscribe();
   }, [networkRoomId, networkKey, activeChatId, syncNetworkMessages]);
@@ -138,6 +182,7 @@ function App() {
   const [summaryModalText, setSummaryModalText] = useState("");
   
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showAddCharacterModal, setShowAddCharacterModal] = useState(false);
   const [showChubModal, setShowChubModal] = useState(false);
   const [chubQuery, setChubQuery] = useState('');
   const [chubIncludeNsfw, setChubIncludeNsfw] = useState(true);
@@ -146,6 +191,7 @@ function App() {
   const [isChubLoading, setIsChubLoading] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showChatHeaderMenu, setShowChatHeaderMenu] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [input, setInput] = useState('');
   const [tempApiKey, setTempApiKey] = useState('');
@@ -181,7 +227,44 @@ function App() {
 
   const activeChat = chats.find(c => c.id === activeChatId);
 
-  const handleInvite = async () => {
+  const [showLobbyModal, setShowLobbyModal] = useState(false);
+  const [lobbyUserName, setLobbyUserName] = useState('');
+  const [lobbyUserAvatar, setLobbyUserAvatar] = useState(null);
+  const [lobbyUserDescription, setLobbyUserDescription] = useState('');
+  const clientIdRef = useRef(Math.random().toString(36).substr(2, 9));
+
+  const openLobbyModal = () => {
+      setLobbyUserName(activeChat?.userName || userName || '');
+      setLobbyUserAvatar(activeChat?.userAvatar || userAvatar || null);
+      setLobbyUserDescription(activeChat?.userDescription || userDescription || '');
+      setShowLobbyModal(true);
+  };
+
+  const saveLobbyProfile = async () => {
+      if (activeChatId) {
+          updateChatField(activeChatId, 'userName', lobbyUserName);
+          updateChatField(activeChatId, 'userAvatar', lobbyUserAvatar);
+          updateChatField(activeChatId, 'userDescription', lobbyUserDescription);
+      }
+      if (networkRoomId && networkKey) {
+          try {
+              const eventPayload = {
+                  type: 'USER_JOINED',
+                  user: {
+                      id: clientIdRef.current,
+                      name: lobbyUserName,
+                      avatar: lobbyUserAvatar,
+                      description: lobbyUserDescription
+                  }
+              };
+              const enc = await encryptMessage(eventPayload, networkKey);
+              await sendMessage(networkRoomId, enc);
+          } catch(e) { console.error("Broadcast failed", e); }
+      }
+      setShowLobbyModal(false);
+  };
+
+  const handleInvite = async (mode = 'multiplayer') => {
     if (!activeChat) return;
     try {
         const key = await generateKey();
@@ -189,8 +272,16 @@ function App() {
         const rId = Math.random().toString(36).substr(2, 9);
         
         const chatChars = activeChat.characterIds ? activeChat.characterIds.map(id => characters.find(c => c.id === id)).filter(Boolean) : [];
-        const chatMetadata = { ...activeChat, messages: [] };
-        const metadata = { chat: chatMetadata, characters: chatChars };
+        
+        let chatMetadata;
+        let metadata;
+        if (mode === 'sync') {
+            chatMetadata = { ...activeChat };
+            metadata = { chat: chatMetadata, characters: chatChars, syncMode: true, hostClientId: clientIdRef.current };
+        } else {
+            chatMetadata = { ...activeChat, messages: [] };
+            metadata = { chat: chatMetadata, characters: chatChars };
+        }
         
         const encryptedMetadata = await encryptMessage(metadata, key);
         await publishRoomMetadata(rId, encryptedMetadata);
@@ -565,11 +656,11 @@ function App() {
       return;
     }
 
-    const userMessage = { role: 'user', content: input.trim(), mentions, replyToId };
+    const userMessage = { role: 'user', content: input.trim(), mentions, replyToId, senderId: clientIdRef.current };
     
     if (networkRoomId && networkKey) {
         try {
-            const enc = await encryptMessage(userMessage, networkKey);
+            const enc = await encryptMessage({ type: 'MESSAGE', payload: userMessage }, networkKey);
             const userMsgId = await sendMessage(networkRoomId, enc);
             userMessage.id = userMsgId;
         } catch(e) { console.error("Network send error", e); }
@@ -619,6 +710,13 @@ function App() {
         return charContext;
       }).filter(Boolean).join('. ');
       finalSystemPrompt = `[ГЛОБАЛЬНЫЙ СЦЕНАРИЙ]: ${activeChat.world_context || ''}. [УЧАСТНИКИ]: ${charsDesc}. СТРОГОЕ ПРАВИЛО: Каждую свою реплику начинай с имени персонажа в формате "Имя:". Отвечай только за заявленных персонажей. Никогда не пиши действия или реплики за Пользователя.`;
+      
+      if (mentions && mentions.length > 0) {
+        const mentionedNames = mentions.map(id => characters.find(c => c.id === id)?.name).filter(Boolean);
+        if (mentionedNames.length > 0) {
+          finalSystemPrompt += `\n\n[ВНИМАНИЕ: Пользователь обращается персонально к: ${mentionedNames.join(', ')}. Ответить должны ИМЕННО эти персонажи.]`;
+        }
+      }
     } else if (activeChat.type === 'generator') {
       finalSystemPrompt = `Ты — эксперт по созданию глубоких, живых и нешаблонных персонажей для ролевых игр. Пользователь опишет тебе свою идею. Твоя задача — придумать реалистичное имя, характер, скрытые мотивы.\n\nКогда анкета согласована, ты ОБЯЗАН выдать результат в формате JSON внутри тегов <character type="application/json">. Структура: { "name": "Имя", "avatar_emoji": "🎭", "system_prompt": "Промпт (роль и поведение)", "description": "Внешность", "personality": "Характер", "scenario": "Сценарий/Мир", "first_mes": "Первое сообщение", "mes_example": "Пример диалогов" }`;
     } else if (activeChat.type === 'plot_generator') {
@@ -673,7 +771,7 @@ function App() {
       if (aiMessage) {
         if (networkRoomId && networkKey) {
            try {
-               const enc = await encryptMessage(aiMessage, networkKey);
+               const enc = await encryptMessage({ type: 'MESSAGE', payload: aiMessage }, networkKey);
                const aiMsgId = await sendMessage(networkRoomId, enc);
                aiMessage.id = aiMsgId;
            } catch(e) { console.error("Network send error", e); }
@@ -1053,19 +1151,42 @@ function App() {
           
           {activeChat ? (
             <>
-              <div 
-                className={`w-10 h-10 bg-white/60 rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0 border border-indigo-50 ${activeChat.type === 'single' ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-                onClick={() => {
-                  if (activeChat.type === 'single' && activeChat.characterIds?.length > 0) {
-                    const char = characters.find(c => c.id === activeChat.characterIds[0]);
-                    if (char) openEditContact(char);
-                  }
-                }}
-              >
-                {activeChat.type === 'generator' ? <Bot className="text-violet-500 w-6 h-6" /> : 
-                 activeChat.type === 'plot_generator' ? <Sparkles className="text-violet-500 w-6 h-6" /> : 
-                 activeChat.type === 'group' ? <Users className="text-violet-500 w-6 h-6" /> : 
-                 renderAvatar(activeChat.type === 'single' && activeChat.characterIds?.length > 0 ? (characters.find(c => c.id === activeChat.characterIds[0])?.avatarBase64 || activeChat.avatarBase64) : activeChat.avatarBase64)}
+              <div className="flex -space-x-3 mr-3 flex-shrink-0 cursor-pointer" onClick={() => { openLobbyModal(); }}>
+                {/* Character Avatars */}
+                {activeChat.type === 'group' ? (
+                  activeChat.characterIds?.slice(0, 3).map((id, i) => {
+                    const char = characters.find(c => c.id === id);
+                    return char ? (
+                      <div key={id} className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm" style={{ zIndex: 10 - i }}>
+                        {renderAvatar(char.avatarBase64)}
+                      </div>
+                    ) : null;
+                  })
+                ) : activeChat.type === 'single' && activeChat.characterIds?.length > 0 ? (
+                  <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm" style={{ zIndex: 10 }}>
+                    {renderAvatar(characters.find(c => c.id === activeChat.characterIds[0])?.avatarBase64 || activeChat.avatarBase64)}
+                  </div>
+                ) : activeChat.type === 'generator' ? (
+                  <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm" style={{ zIndex: 10 }}>
+                    <Bot className="text-violet-500 w-6 h-6" />
+                  </div>
+                ) : activeChat.type === 'plot_generator' ? (
+                  <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm" style={{ zIndex: 10 }}>
+                    <Sparkles className="text-violet-500 w-6 h-6" />
+                  </div>
+                ) : null}
+
+                {/* Local User Avatar */}
+                <div className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm" style={{ zIndex: 5 }}>
+                  {renderAvatar(activeChat.userAvatar || userAvatar)}
+                </div>
+
+                {/* Network Guests */}
+                {activeChat.networkUsers?.slice(0, 2).map((guest, i) => (
+                  <div key={guest.id} className="w-10 h-10 bg-white/60 rounded-full flex items-center justify-center overflow-hidden border-2 border-white shadow-sm" style={{ zIndex: 4 - i }}>
+                    {renderAvatar(guest.avatar)}
+                  </div>
+                ))}
               </div>
               <div className="flex-1 overflow-hidden mr-2">
                 <h1 className="font-semibold text-slate-800 text-lg leading-tight truncate">
@@ -1086,26 +1207,7 @@ function App() {
             </div>
           )}
 
-          <div className="flex items-center gap-1 md:gap-2">
-            {activeChat && activeChat.type === 'single' && (
-              <button
-                onClick={handleSummarizeChat}
-                disabled={isSummarizing || activeChat.messages.length === 0}
-                className="p-1.5 md:p-2 bg-white/60 text-violet-500 rounded-lg hover:bg-white/80 transition-colors disabled:opacity-50"
-                title="Завершить главу и начать новую (Саммари)"
-              >
-                {isSummarizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitBranch className="w-4 h-4" />}
-              </button>
-            )}
-            {activeChat && (
-              <button
-                onClick={handleInvite}
-                className="p-1.5 md:p-2 bg-white/60 text-violet-500 rounded-lg hover:bg-white/80 transition-colors"
-                title="Сгенерировать инвайт-ссылку"
-              >
-                <Link2 className="w-4 h-4" />
-              </button>
-            )}
+          <div className="flex items-center gap-1 md:gap-2 relative">
             <select 
               value={selectedModel} 
               onChange={(e) => setSelectedModel(e.target.value)}
@@ -1123,44 +1225,99 @@ function App() {
                 </option>
               ))}
             </select>
-            <button
-              onClick={() => toggleFavoriteModel(selectedModel)}
-              className={`p-1.5 md:p-2 rounded-lg transition-colors ${favoriteModels?.includes(selectedModel) ? 'text-amber-400 hover:text-amber-500' : 'text-slate-800/30 hover:text-amber-400'}`}
-              title={favoriteModels?.includes(selectedModel) ? "Убрать из избранного" : "Добавить в избранное"}
-            >
-              <Star className="w-4 h-4 md:w-5 md:h-5" fill={favoriteModels?.includes(selectedModel) ? "currentColor" : "none"} />
-            </button>
             
             {activeChat && (
-              <>
-                <button 
-                  onClick={() => {
-                    if (window.confirm('Вы уверены, что хотите очистить историю сообщений в этом чате?')) {
-                      clearChatMessages(activeChat.id);
-                    }
-                  }}
+              <div className="relative">
+                <button
+                  onClick={() => setShowChatHeaderMenu(!showChatHeaderMenu)}
                   className="p-1.5 md:p-2 text-slate-800/50 hover:text-violet-500 hover:bg-white/50 rounded-lg transition-colors"
-                  title="Очистить историю сообщений"
+                  title="Настройки чата"
                 >
-                  <Eraser className="w-4 h-4 md:w-5 md:h-5" />
+                  <MoreVertical className="w-5 h-5" />
                 </button>
+                
+                {showChatHeaderMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowChatHeaderMenu(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white/95 backdrop-blur-xl border border-white/50 shadow-lg rounded-xl z-50 overflow-hidden py-1">
+                      {activeChat.type === 'single' && (
+                        <button
+                          onClick={() => { setShowChatHeaderMenu(false); handleSummarizeChat(); }}
+                          disabled={isSummarizing || activeChat.messages.length === 0}
+                          className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-600 transition flex items-center disabled:opacity-50"
+                        >
+                          {isSummarizing ? <Loader2 className="w-4 h-4 mr-3 animate-spin text-violet-500" /> : <GitBranch className="w-4 h-4 mr-3 text-violet-500" />}
+                          Саммари главы
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => { setShowChatHeaderMenu(false); setShowAddCharacterModal(true); }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-600 transition flex items-center"
+                      >
+                        <UserPlus className="w-4 h-4 mr-3 text-violet-500" />
+                        Пригласить персонажа
+                      </button>
+                      
+                      <button
+                        onClick={() => { setShowChatHeaderMenu(false); handleInvite('multiplayer'); }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-600 transition flex items-center"
+                      >
+                        <Link2 className="w-4 h-4 mr-3 text-violet-500" />
+                        Пригласить друга
+                      </button>
 
-                <button 
-                  onClick={() => {
-                    let msg = 'Вы уверены, что хотите полностью удалить этот чат?';
-                    if (activeChat.type === 'single') msg = 'Вы уверены, что хотите удалить этот чат и этого персонажа навсегда?';
-                    if (activeChat.type === 'group') msg = 'Вы уверены, что хотите удалить этот сюжет?';
-                    
-                    if (window.confirm(msg)) {
-                      deleteChat(activeChat.id);
-                    }
-                  }}
-                  className="p-1.5 md:p-2 text-slate-800/50 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                  title={activeChat.type === 'single' ? "Удалить чат и персонажа" : "Удалить чат"}
-                >
-                  <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
-              </>
+                      <button
+                        onClick={() => { setShowChatHeaderMenu(false); handleInvite('sync'); }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-violet-50 hover:text-violet-600 transition flex items-center"
+                      >
+                        <Link2 className="w-4 h-4 mr-3 text-violet-500" />
+                        Синхронизировать устройство
+                      </button>
+
+                      <button
+                        onClick={() => { setShowChatHeaderMenu(false); toggleFavoriteModel(selectedModel); }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-amber-50 hover:text-amber-600 transition flex items-center"
+                      >
+                        <Star className="w-4 h-4 mr-3 text-amber-500" fill={favoriteModels?.includes(selectedModel) ? "currentColor" : "none"} />
+                        {favoriteModels?.includes(selectedModel) ? "Убрать звезду" : "В избранное"}
+                      </button>
+
+                      <div className="h-px bg-slate-200/50 my-1 mx-2"></div>
+
+                      <button 
+                        onClick={() => {
+                          setShowChatHeaderMenu(false);
+                          if (window.confirm('Вы уверены, что хотите очистить историю сообщений в этом чате?')) {
+                            clearChatMessages(activeChat.id);
+                          }
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 transition flex items-center"
+                      >
+                        <Eraser className="w-4 h-4 mr-3 text-slate-400" />
+                        Очистить историю
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setShowChatHeaderMenu(false);
+                          let msg = 'Вы уверены, что хотите полностью удалить этот чат?';
+                          if (activeChat.type === 'single') msg = 'Вы уверены, что хотите удалить этот чат и этого персонажа навсегда?';
+                          if (activeChat.type === 'group') msg = 'Вы уверены, что хотите удалить этот сюжет?';
+                          
+                          if (window.confirm(msg)) {
+                            deleteChat(activeChat.id);
+                          }
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition flex items-center mt-1"
+                      >
+                        <Trash2 className="w-4 h-4 mr-3" />
+                        Удалить чат
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </header>
@@ -1199,13 +1356,30 @@ function App() {
                 speakerChar = characters.find(c => c.name.toLowerCase() === parsed.speaker.toLowerCase());
               }
               
+              let isLocalUser = isUser && (!msg.senderId || msg.senderId === 'user_local' || msg.senderId === clientIdRef.current);
+              
               let avatarSrc = null;
               if (!isUser) {
                 if (activeChat.type === 'single') avatarSrc = activeChat.avatarBase64;
                 else if (speakerChar) avatarSrc = speakerChar.avatarBase64;
+              } else {
+                if (!isLocalUser) {
+                    const guest = activeChat.networkUsers?.find(u => u.id === msg.senderId);
+                    avatarSrc = guest ? guest.avatar : null;
+                } else {
+                    avatarSrc = activeChat.userAvatar || userAvatar;
+                }
               }
               
-              const displayName = isUser ? 'Вы' : (parsed.speaker || (activeChat.type === 'single' ? activeChat.name : (activeChat.type === 'generator' ? 'ИИ' : 'Неизвестный')));
+              let displayName = parsed.speaker || (activeChat.type === 'single' ? activeChat.name : (activeChat.type === 'generator' ? 'ИИ' : 'Неизвестный'));
+              if (isUser) {
+                  if (!isLocalUser) {
+                      const guest = activeChat.networkUsers?.find(u => u.id === msg.senderId);
+                      displayName = guest ? guest.name : 'Гость';
+                  } else {
+                      displayName = activeChat.userName || userName || 'Вы';
+                  }
+              }
 
               const extractedJSON = (!isUser && activeChat.type === 'generator') ? extractCharacterJSON(msg.content) : null;
 
@@ -1219,33 +1393,29 @@ function App() {
                   <div className={`flex max-w-[95%] md:max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end gap-2 ${editingMessageIndex === idx ? 'w-full' : ''}`}>
                     
                     {/* Desktop Avatar (hidden on mobile) */}
-                    {!isUser && (
-                      <div 
-                        className="hidden md:flex w-8 h-8 rounded-full bg-white/60 flex-shrink-0 items-center justify-center overflow-hidden mb-1 border border-indigo-50 shadow-sm cursor-pointer hover:opacity-80 transition"
-                        onClick={() => { if (avatarSrc) setFullscreenImage(avatarSrc); }}
-                      >
-                        {activeChat.type === 'generator' ? <Bot className="w-5 h-5 text-indigo-400" /> : renderAvatar(avatarSrc)}
-                      </div>
-                    )}
+                    <div 
+                      className="hidden md:flex w-8 h-8 rounded-full bg-white/60 flex-shrink-0 items-center justify-center overflow-hidden mb-1 border border-indigo-50 shadow-sm cursor-pointer hover:opacity-80 transition"
+                      onClick={() => { if (avatarSrc) setFullscreenImage(avatarSrc); }}
+                    >
+                      {(!isUser && activeChat.type === 'generator') ? <Bot className="w-5 h-5 text-indigo-400" /> : renderAvatar(avatarSrc)}
+                    </div>
                     
                     <div className={`flex flex-col group min-w-0 ${editingMessageIndex === idx ? 'flex-1' : ''}`}>
                       
                       {/* Mobile Header: Mini-avatar + Name */}
-                      {!isUser && (
-                        <div className="flex md:hidden items-center gap-2 mb-1.5 ml-1">
-                          <div 
-                            className="w-5 h-5 rounded-full bg-white/60 flex-shrink-0 flex items-center justify-center overflow-hidden border border-indigo-50 shadow-sm cursor-pointer hover:opacity-80 transition"
-                            onClick={() => { if (avatarSrc) setFullscreenImage(avatarSrc); }}
-                          >
-                            {activeChat.type === 'generator' ? <Bot className="w-3.5 h-3.5 text-indigo-400" /> : renderAvatar(avatarSrc)}
-                          </div>
-                          <span className="text-xs text-slate-800/70 font-medium">{displayName}</span>
+                      <div className={`flex md:hidden items-center gap-2 mb-1.5 ${isUser ? 'flex-row-reverse mr-1' : 'ml-1'}`}>
+                        <div 
+                          className="w-5 h-5 rounded-full bg-white/60 flex-shrink-0 flex items-center justify-center overflow-hidden border border-indigo-50 shadow-sm cursor-pointer hover:opacity-80 transition"
+                          onClick={() => { if (avatarSrc) setFullscreenImage(avatarSrc); }}
+                        >
+                          {(!isUser && activeChat.type === 'generator') ? <Bot className="w-3.5 h-3.5 text-indigo-400" /> : renderAvatar(avatarSrc)}
                         </div>
-                      )}
+                        <span className="text-xs text-slate-800/70 font-medium">{displayName}</span>
+                      </div>
 
                       {/* Desktop Name for Group chats */}
-                      {!isUser && activeChat.type === 'group' && (
-                        <span className="hidden md:inline-block text-xs text-slate-800/70 mb-1 ml-1 font-medium">{displayName}</span>
+                      {(activeChat.type === 'group' || isUser) && (
+                        <span className={`hidden md:inline-block text-xs text-slate-800/70 mb-1 font-medium ${isUser ? 'mr-1 text-right' : 'ml-1'}`}>{displayName}</span>
                       )}
                       <div className={`flex items-center gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'} ${editingMessageIndex === idx ? 'w-full' : ''}`}>
                         <div 
@@ -1376,7 +1546,7 @@ function App() {
         <footer className="bg-white/40 backdrop-blur-xl border border-white/50 p-3 md:p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] shrink-0 z-10 flex flex-col gap-2">
           
           {/* Target Lock (Панель фокуса) */}
-          {activeChat && (
+          {activeChat && (activeChat.type === 'single' || activeChat.type === 'group') && activeChat.characterIds?.length > 0 && (
             <div className="max-w-4xl mx-auto w-full flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
               <span className="text-xs font-semibold text-slate-800/60 uppercase tracking-wider shrink-0">Кому:</span>
               <button 
@@ -1385,26 +1555,23 @@ function App() {
               >
                 Всем
               </button>
-              <button 
-                onClick={() => {
-                  const isSelected = mentions.includes('wife');
-                  if (isSelected) setMentions(mentions.filter(m => m !== 'wife'));
-                  else setMentions([...mentions, 'wife']);
-                }}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors shrink-0 ${mentions.includes('wife') ? 'bg-violet-400 text-white border-violet-400' : 'bg-white/60 text-slate-800/70 border-white/50 hover:bg-white/80'}`}
-              >
-                Имя Жены
-              </button>
-              <button 
-                onClick={() => {
-                  const isSelected = mentions.includes('ai');
-                  if (isSelected) setMentions(mentions.filter(m => m !== 'ai'));
-                  else setMentions([...mentions, 'ai']);
-                }}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors shrink-0 ${mentions.includes('ai') ? 'bg-violet-400 text-white border-violet-400' : 'bg-white/60 text-slate-800/70 border-white/50 hover:bg-white/80'}`}
-              >
-                Алиса ИИ
-              </button>
+              {activeChat.characterIds.map(charId => {
+                const char = characters.find(c => c.id === charId);
+                if (!char) return null;
+                return (
+                  <button 
+                    key={charId}
+                    onClick={() => {
+                      const isSelected = mentions.includes(charId);
+                      if (isSelected) setMentions(mentions.filter(m => m !== charId));
+                      else setMentions([...mentions, charId]);
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors shrink-0 ${mentions.includes(charId) ? 'bg-violet-400 text-white border-violet-400' : 'bg-white/60 text-slate-800/70 border-white/50 hover:bg-white/80'}`}
+                  >
+                    {char.name}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -1452,7 +1619,160 @@ function App() {
         </footer>
       </div>
 
+      {/* Modal: Add Character to Chat */}
+      {showAddCharacterModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white/95 backdrop-blur-xl border border-white/50 rounded-2xl max-w-sm w-full p-6 shadow-xl flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Пригласить персонажа</h3>
+              <button onClick={() => setShowAddCharacterModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto max-h-[50vh] space-y-2 pr-1">
+              {characters.filter(c => !activeChat?.characterIds?.includes(c.id)).map(char => (
+                <div 
+                  key={char.id}
+                  onClick={() => {
+                    addCharacterToChat(activeChat.id, char.id);
+                    addMessageToChat(activeChat.id, { 
+                      role: 'assistant', 
+                      content: `[Система]: Персонаж ${char.name} присоединился к беседе.`,
+                      name: 'Система'
+                    });
+                    setShowAddCharacterModal(false);
+                  }}
+                  className="flex items-center p-3 hover:bg-slate-50 border border-transparent hover:border-slate-100 rounded-xl cursor-pointer transition-colors"
+                >
+                  <div className="w-10 h-10 bg-white shadow-sm rounded-full flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                    {renderAvatar(char.avatarBase64)}
+                  </div>
+                  <div className="overflow-hidden">
+                    <h4 className="font-medium text-slate-800 text-sm truncate">{char.name}</h4>
+                  </div>
+                </div>
+              ))}
+              
+              {characters.filter(c => !activeChat?.characterIds?.includes(c.id)).length === 0 && (
+                <div className="text-center text-slate-500 text-sm py-4">Нет доступных контактов для добавления</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal: New Contact */}
+      {showLobbyModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-slate-800">Настройки комнаты / Лобби</h3>
+              <button onClick={() => setShowLobbyModal(false)} className="text-slate-800/60 hover:text-slate-800">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                {/* My Role */}
+                <div className="bg-white/30 backdrop-blur-sm rounded-xl p-4 border border-white/50 shadow-sm">
+                    <h4 className="text-sm font-bold text-slate-800 mb-3">Ваша роль в этом чате</h4>
+                    <div className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                            <label className="w-16 h-16 rounded-full bg-white/60 border border-indigo-100 flex items-center justify-center cursor-pointer overflow-hidden shadow-sm hover:opacity-80 transition shrink-0">
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setLobbyUserAvatar)} />
+                                {lobbyUserAvatar ? <img src={lobbyUserAvatar} className="w-full h-full object-cover" /> : <User className="text-indigo-400 w-8 h-8" />}
+                            </label>
+                            <span className="text-[10px] text-slate-800/60 mt-1">Изменить</span>
+                        </div>
+                        <div className="flex-1 space-y-3">
+                            <input 
+                                type="text"
+                                value={lobbyUserName}
+                                onChange={e => setLobbyUserName(e.target.value)}
+                                placeholder="Ваше имя"
+                                className="w-full border border-white/60 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500 bg-white/50 text-slate-800 font-medium"
+                            />
+                            <TextareaAutosize 
+                                minRows={2}
+                                value={lobbyUserDescription}
+                                onChange={e => setLobbyUserDescription(e.target.value)}
+                                placeholder="О себе (внешность, роль)"
+                                className="w-full border border-white/60 rounded-xl p-3 text-sm outline-none focus:border-indigo-500 bg-white/50 text-slate-800"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* AI Characters */}
+                {(activeChat?.type === 'group' || activeChat?.type === 'single') && activeChat.characterIds && activeChat.characterIds.length > 0 && (
+                    <div className="bg-white/30 backdrop-blur-sm rounded-xl p-4 border border-white/50 shadow-sm">
+                        <div className="flex justify-between items-center mb-3">
+                            <h4 className="text-sm font-bold text-slate-800">Участники-ИИ</h4>
+                            {activeChat?.type === 'group' && (
+                                <button onClick={() => { setShowLobbyModal(false); setShowAddCharacterModal(true); }} className="text-xs flex items-center gap-1 text-violet-600 hover:text-violet-700 font-medium">
+                                    <Plus className="w-3 h-3" /> Добавить
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {activeChat.characterIds.map(id => {
+                                const char = characters.find(c => c.id === id);
+                                if (!char) return null;
+                                return (
+                                    <div key={id} onClick={() => { setShowLobbyModal(false); openEditContact(char); }} className="flex items-center gap-2 bg-white/50 rounded-lg px-2 py-1.5 border border-white/60 cursor-pointer hover:bg-white/80 transition shadow-sm">
+                                        <div className="w-6 h-6 rounded-full overflow-hidden shrink-0">
+                                            {renderAvatar(char.avatarBase64)}
+                                        </div>
+                                        <span className="text-xs font-medium text-slate-800 truncate max-w-[100px]">{char.name}</span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Network Guests */}
+                {activeChat?.networkUsers && activeChat.networkUsers.filter(u => u.id !== clientIdRef.current).length > 0 && (
+                    <div className="bg-white/30 backdrop-blur-sm rounded-xl p-4 border border-white/50 shadow-sm">
+                        <h4 className="text-sm font-bold text-slate-800 mb-3">Гости по ссылке</h4>
+                        <div className="flex flex-col gap-2">
+                            {activeChat.networkUsers.filter(u => u.id !== clientIdRef.current).map(guest => (
+                                <div key={guest.id} className="flex items-center gap-3 bg-white/50 rounded-lg p-2 border border-white/60 shadow-sm">
+                                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-white/60">
+                                        {renderAvatar(guest.avatar)}
+                                    </div>
+                                    <div className="flex-1 overflow-hidden">
+                                        <div className="text-sm font-medium text-slate-800 truncate">{guest.name}</div>
+                                        <div className="text-xs text-slate-800/60 truncate">{guest.description || 'Нет описания'}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-2 shrink-0">
+                <button 
+                    onClick={saveLobbyProfile} 
+                    className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <Check className="w-5 h-5" />
+                    Сохранить / Войти
+                </button>
+                <button 
+                    onClick={() => { setShowLobbyModal(false); handleInvite('multiplayer'); }} 
+                    className="w-full bg-violet-100 hover:bg-violet-200 text-violet-700 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <Link2 className="w-5 h-5" />
+                    Сгенерировать сетевую ссылку
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showContactModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white/40 backdrop-blur-xl border border-white/50 rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] flex flex-col">

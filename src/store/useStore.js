@@ -40,6 +40,8 @@ export const useStore = create(
       favoriteModels: [],
       selectedModel: 'sao10k/l3.3-euryale-70b',
       userName: 'Пользователь',
+      userAvatar: null,
+      userDescription: '',
 
       setSelectedModel: (modelId) => set({ selectedModel: modelId }),
 
@@ -52,6 +54,8 @@ export const useStore = create(
       setAutoTranslate: (val) => set({ autoTranslate: val }),
       setApiKey: (key) => set({ apiKey: key }),
       setUserName: (name) => set({ userName: name }),
+      setUserAvatar: (avatar) => set({ userAvatar: avatar }),
+      setUserDescription: (desc) => set({ userDescription: desc }),
       setActiveChatId: (id) => set({ activeChatId: id }),
       setRoomKey: (roomId, key) => set((state) => ({
         roomKeys: { ...state.roomKeys, [roomId]: key }
@@ -126,16 +130,38 @@ export const useStore = create(
       },
 
       addChat: (chat) => {
+        const state = get();
         const newChat = { 
           ...chat, 
           id: chat.id || generateId(), 
           messages: chat.messages || [],
           createdAt: chat.createdAt || Date.now(),
           parentId: chat.parentId || null,
-          summary: chat.summary || ''
+          summary: chat.summary || '',
+          userName: chat.userName || state.userName,
+          userAvatar: chat.userAvatar || state.userAvatar,
+          userDescription: chat.userDescription || state.userDescription,
+          networkUsers: chat.networkUsers || []
         };
         set((state) => ({ chats: [...state.chats, newChat], activeChatId: newChat.id }));
         return newChat;
+      },
+
+      addCharacterToChat: (chatId, charId) => {
+        set((state) => ({
+          chats: state.chats.map((chat) => {
+            if (chat.id !== chatId) return chat;
+            const newCharacterIds = chat.characterIds ? [...chat.characterIds] : [];
+            if (!newCharacterIds.includes(charId)) {
+              newCharacterIds.push(charId);
+            }
+            return {
+              ...chat,
+              type: 'group',
+              characterIds: newCharacterIds
+            };
+          })
+        }));
       },
 
       addMessageToChat: (chatId, message) => {
@@ -222,6 +248,38 @@ export const useStore = create(
           chats: state.chats.filter(c => !(c.type === 'single' && c.characterIds.includes(charId))),
           activeChatId: state.chats.find(c => c.id === state.activeChatId && c.type === 'single' && c.characterIds.includes(charId)) ? null : state.activeChatId
         }));
+      },
+
+      syncFullChat: (metadata) => {
+        set((state) => {
+          const newCharacters = [...state.characters];
+          const charMap = new Set(newCharacters.map(c => c.id));
+          
+          if (metadata.characters) {
+            metadata.characters.forEach(char => {
+              if (!charMap.has(char.id)) {
+                newCharacters.push(char);
+                charMap.add(char.id);
+              }
+            });
+          }
+          
+          let newChats = [...state.chats];
+          if (metadata.chat) {
+            const existingChatIndex = newChats.findIndex(c => c.id === metadata.chat.id);
+            if (existingChatIndex !== -1) {
+              newChats[existingChatIndex] = { ...newChats[existingChatIndex], ...metadata.chat };
+            } else {
+              newChats.push(metadata.chat);
+            }
+          }
+          
+          return {
+            characters: newCharacters,
+            chats: newChats,
+            activeChatId: metadata.chat?.id || state.activeChatId
+          };
+        });
       },
     }),
     {

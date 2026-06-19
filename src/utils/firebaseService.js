@@ -84,19 +84,25 @@ export async function sendMessage(roomId, encryptedText) {
     }
 }
 
-/**
- * Сохраняет метаданные комнаты (карточки персонажей, настройки чата)
- */
 export async function publishRoomMetadata(roomId, encryptedMetadata) {
     if (!roomId || !encryptedMetadata) throw new Error("roomId и encryptedMetadata обязательны");
-    const { doc, setDoc } = await import('firebase/firestore');
+    const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
     
     try {
+        const CHUNK_SIZE = 800000;
+        const totalChunks = Math.ceil(encryptedMetadata.length / CHUNK_SIZE);
+
         const roomRef = doc(db, 'rooms', roomId);
         await setDoc(roomRef, {
-            metadata: encryptedMetadata,
+            chunksCount: totalChunks,
             updatedAt: serverTimestamp()
         }, { merge: true });
+
+        for (let i = 0; i < totalChunks; i++) {
+            const chunkStr = encryptedMetadata.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+            const chunkRef = doc(db, 'rooms', roomId, 'chunks', i.toString());
+            await setDoc(chunkRef, { index: i, data: chunkStr });
+        }
     } catch (error) {
         console.error("Ошибка при сохранении метаданных:", error);
         throw error;
@@ -108,17 +114,30 @@ export async function publishRoomMetadata(roomId, encryptedMetadata) {
  */
 export async function fetchRoomMetadata(roomId) {
     if (!roomId) throw new Error("roomId обязателен");
-    const { doc, getDoc } = await import('firebase/firestore');
+    const { doc, getDoc, collection, getDocs, query, orderBy } = await import('firebase/firestore');
     
     try {
         const roomRef = doc(db, 'rooms', roomId);
         const docSnap = await getDoc(roomRef);
         
         if (docSnap.exists()) {
-            return docSnap.data().metadata;
-        } else {
-            return null;
+            const data = docSnap.data();
+            if (data.metadata) {
+                return data.metadata; // Обратная совместимость
+            }
+            if (data.chunksCount) {
+                const chunksRef = collection(db, 'rooms', roomId, 'chunks');
+                const q = query(chunksRef, orderBy('index', 'asc'));
+                const querySnapshot = await getDocs(q);
+                
+                let fullMetadata = '';
+                querySnapshot.forEach((chunkDoc) => {
+                    fullMetadata += chunkDoc.data().data;
+                });
+                return fullMetadata;
+            }
         }
+        return null;
     } catch (error) {
         console.error("Ошибка при получении метаданных:", error);
         throw error;
