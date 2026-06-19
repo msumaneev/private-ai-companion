@@ -92,6 +92,9 @@ function App() {
                     const metadata = await decryptMessage(encryptedMetadata, key);
                     
                     const processSync = () => {
+                        if (metadata.chat) {
+                            useStore.getState().setRoomKey(metadata.chat.id, { rId, kStr });
+                        }
                         if (metadata.syncMode === true) {
                             syncFullChat(metadata);
                             if (metadata.chat) {
@@ -129,7 +132,6 @@ function App() {
                                 setActiveTab('contacts');
                                 setExpandedCharacters(prev => ({...prev, [metadata.chat.characterIds[0]]: true}));
                             }
-                            useStore.getState().setRoomKey(metadata.chat.id, { rId, kStr });
                         }
                         openLobbyModal();
                     };
