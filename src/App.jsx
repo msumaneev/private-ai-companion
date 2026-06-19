@@ -161,6 +161,8 @@ function App() {
                          });
                      }
                  } else if (eventType === 'MESSAGE') {
+                     // Пропускаем свои же сообщения — они уже добавлены локально
+                     if (payload.senderId && payload.senderId === clientIdRef.current) continue;
                      decryptedMessages.push({ ...payload, id: msg.id });
                  }
              } catch (e) {
@@ -775,6 +777,7 @@ function App() {
       const aiMessage = data.choices?.[0]?.message;
       
       if (aiMessage) {
+        aiMessage.senderId = clientIdRef.current;
         if (networkRoomId && networkKey) {
            try {
                const enc = await encryptMessage({ type: 'MESSAGE', payload: aiMessage }, networkKey);
