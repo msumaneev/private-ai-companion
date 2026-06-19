@@ -91,33 +91,56 @@ function App() {
                 try {
                     const metadata = await decryptMessage(encryptedMetadata, key);
                     
-                    if (metadata.syncMode === true) {
-                        syncFullChat(metadata);
-                        // networkRoomId и networkKey уже установлены выше (строки 81, 83)
-                        // clientIdRef остаётся уникальным для каждого устройства
-                        window.history.replaceState(null, null, ' ');
-                        return; // Пропускаем окно Lobby
-                    }
-
-                    if (metadata.characters) {
-                        const currentChars = useStore.getState().characters;
-                        const charMap = new Set(currentChars.map(c => c.id));
-                        metadata.characters.forEach(char => {
-                            if (!charMap.has(char.id)) {
-                                useStore.getState().addCharacter(char);
+                    const processSync = () => {
+                        if (metadata.syncMode === true) {
+                            syncFullChat(metadata);
+                            if (metadata.chat) {
+                                if (metadata.chat.type === 'group' || metadata.chat.type === 'plot_generator') {
+                                    setActiveTab('stories');
+                                } else if (metadata.chat.characterIds && metadata.chat.characterIds[0]) {
+                                    setActiveTab('contacts');
+                                    setExpandedCharacters(prev => ({...prev, [metadata.chat.characterIds[0]]: true}));
+                                }
                             }
-                        });
-                    }
-                    if (metadata.chat) {
-                        const currentChats = useStore.getState().chats;
-                        const chatExists = currentChats.some(c => c.id === metadata.chat.id);
-                        if (!chatExists) {
-                            useStore.getState().addChat(metadata.chat);
-                        } else {
-                            useStore.getState().setActiveChatId(metadata.chat.id);
+                            window.history.replaceState(null, null, ' ');
+                            return; // Пропускаем окно Lobby
                         }
-                    }
-                    openLobbyModal();
+
+                        if (metadata.characters) {
+                            const currentChars = useStore.getState().characters;
+                            const charMap = new Set(currentChars.map(c => c.id));
+                            metadata.characters.forEach(char => {
+                                if (!charMap.has(char.id)) {
+                                    useStore.getState().addCharacter(char);
+                                }
+                            });
+                        }
+                        if (metadata.chat) {
+                            const currentChats = useStore.getState().chats;
+                            const chatExists = currentChats.some(c => c.id === metadata.chat.id);
+                            if (!chatExists) {
+                                useStore.getState().addChat(metadata.chat);
+                            } else {
+                                useStore.getState().setActiveChatId(metadata.chat.id);
+                            }
+                            if (metadata.chat.type === 'group' || metadata.chat.type === 'plot_generator') {
+                                setActiveTab('stories');
+                            } else if (metadata.chat.characterIds && metadata.chat.characterIds[0]) {
+                                setActiveTab('contacts');
+                                setExpandedCharacters(prev => ({...prev, [metadata.chat.characterIds[0]]: true}));
+                            }
+                        }
+                        openLobbyModal();
+                    };
+
+                    const checkHydration = () => {
+                        if (useStore.persist.hasHydrated()) {
+                            processSync();
+                        } else {
+                            setTimeout(checkHydration, 50);
+                        }
+                    };
+                    checkHydration();
                 } catch (e) {
                     console.error("Failed to decrypt metadata", e);
                 }
