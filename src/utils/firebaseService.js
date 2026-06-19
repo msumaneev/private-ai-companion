@@ -12,12 +12,12 @@ import {
 } from 'firebase/firestore';
 
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCc-VApuGFu4QcPdYEnbzmOhDI5zJPJQTk",
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "private-ai-companion-59d6f.firebaseapp.com",
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "private-ai-companion-59d6f",
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "private-ai-companion-59d6f.firebasestorage.app",
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "828842217718",
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:828842217718:web:8849a83a57d42f25f31cd7"
 };
 
 // Инициализация приложения и базы данных. 
@@ -86,23 +86,31 @@ export async function sendMessage(roomId, encryptedText) {
 
 export async function publishRoomMetadata(roomId, encryptedMetadata) {
     if (!roomId || !encryptedMetadata) throw new Error("roomId и encryptedMetadata обязательны");
+    console.log("Dynamically importing firestore modules...");
     const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
     
     try {
         const CHUNK_SIZE = 800000;
         const totalChunks = Math.ceil(encryptedMetadata.length / CHUNK_SIZE);
+        console.log(`Calculated totalChunks: ${totalChunks}`);
 
+        console.log("Getting roomRef...");
         const roomRef = doc(db, 'rooms', roomId);
+        console.log("Calling setDoc for roomRef...");
         await setDoc(roomRef, {
             chunksCount: totalChunks,
             updatedAt: serverTimestamp()
         }, { merge: true });
+        console.log("setDoc for roomRef completed.");
 
         for (let i = 0; i < totalChunks; i++) {
+            console.log(`Writing chunk ${i}...`);
             const chunkStr = encryptedMetadata.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
             const chunkRef = doc(db, 'rooms', `${roomId}_chunk_${i}`);
             await setDoc(chunkRef, { index: i, data: chunkStr });
+            console.log(`Chunk ${i} written.`);
         }
+        console.log("publishRoomMetadata fully completed.");
     } catch (error) {
         console.error("Ошибка при сохранении метаданных:", error);
         throw error;
